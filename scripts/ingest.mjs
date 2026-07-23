@@ -159,21 +159,27 @@ async function ingestEntities(isFull, changes) {
       newItems.push(item);
     } else {
       const desk = deskForEntity(item.category);
-      // status change: became surrendered/cancelled
-      if (desk === "Surrendered" && prev.status !== "Surrendered/Cancelled") {
-        movedToSurrendered.push({ prev, item });
+      const becameSurrendered =
+        desk === "Surrendered" && prev.status !== "Surrendered/Cancelled";
+      if (becameSurrendered) movedToSurrendered.push({ prev, item });
+      // Only write when something actually changed — avoids ~2000 no-op
+      // updates every run. (last_seen isn't used for removal detection.)
+      const changed =
+        item.category !== prev.category ||
+        item.subcategory !== prev.subcategory ||
+        becameSurrendered;
+      if (changed) {
+        await supa
+          .from("entities")
+          .update({
+            category: item.category,
+            subcategory: item.subcategory,
+            desk,
+            status: desk === "Surrendered" ? "Surrendered/Cancelled" : prev.status || "Active",
+            last_seen: new Date().toISOString(),
+          })
+          .eq("id", prev.id);
       }
-      // keep category/desk/last_seen fresh
-      await supa
-        .from("entities")
-        .update({
-          category: item.category,
-          subcategory: item.subcategory,
-          desk,
-          status: desk === "Surrendered" ? "Surrendered/Cancelled" : prev.status || "Active",
-          last_seen: new Date().toISOString(),
-        })
-        .eq("id", prev.id);
     }
   }
 
