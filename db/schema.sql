@@ -182,6 +182,6 @@ as $$
   from publications pub
   where pub.title ilike '%'||q||'%'
 
-  order by the_date desc nulls last
+  order by 7 desc nulls last
   limit 100;
 $$;

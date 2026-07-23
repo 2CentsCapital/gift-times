@@ -41,14 +41,21 @@ const ENTITY_DESKS = ["Brokers", "FMEs", "Insurance", "Fintech", "Banking"];
 
 export async function getCounts() {
   const supa = getSupabase();
-  const { data } = await supa.from("entities").select("desk").eq("status", "Active");
+  const desks = ["Brokers", "FMEs", "Insurance", "Fintech", "Banking"];
   const counts: Record<string, number> = {};
-  let total = 0;
-  for (const r of data || []) {
-    counts[r.desk || "Other"] = (counts[r.desk || "Other"] || 0) + 1;
-    total++;
-  }
-  return { counts, total };
+  // Accurate counts via head:true (PostgREST caps returned rows at 1000).
+  const [{ count: total }, ...deskCounts] = await Promise.all([
+    supa.from("entities").select("*", { count: "exact", head: true }).eq("status", "Active"),
+    ...desks.map((d) =>
+      supa
+        .from("entities")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "Active")
+        .eq("desk", d)
+    ),
+  ]);
+  desks.forEach((d, i) => (counts[d] = deskCounts[i].count || 0));
+  return { counts, total: total || 0 };
 }
 
 export async function getDeskEntities(desk: string, limit = 6): Promise<Entity[]> {

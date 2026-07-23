@@ -24,7 +24,7 @@ export default async function DeskPage({ params }: { params: { desk: string } })
 
   const entityMode = isEntityDesk(desk) || desk === "Surrendered";
   const entities = entityMode ? await getEntitiesByDesk(desk, 300) : [];
-  const pubs = entityMode ? [] : await getDeskPublications(desk, 200);
+  const pubs = entityMode ? [] : await getDeskPublications(desk, 500);
 
   return (
     <div style={{ padding: "24px 0" }}>
