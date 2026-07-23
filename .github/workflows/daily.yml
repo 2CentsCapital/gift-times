@@ -1,0 +1,43 @@
+name: Daily — ingest + 6am newsletter
+
+# 00:20 UTC = 05:50 IST. Ingest runs first, then the newsletter, in order.
+on:
+  schedule:
+    - cron: "20 0 * * *"
+  workflow_dispatch:
+    inputs:
+      send_newsletter:
+        description: "Send the newsletter after ingest?"
+        type: boolean
+        default: false
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gift-times-daily
+      cancel-in-progress: false
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+      OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+      SITE_URL: ${{ secrets.SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm ci --omit=optional || npm install
+
+      - name: Ingest IFSCA data
+        run: node scripts/ingest.mjs
+
+      - name: Send newsletter
+        # Sends on the scheduled run, or on manual runs only if requested.
+        if: github.event_name == 'schedule' || inputs.send_newsletter
+        run: node scripts/send-newsletter.mjs
