@@ -284,6 +284,98 @@ async function ingestPublications(changes) {
   return summary;
 }
 
+async function ingestSezMeetings(changes) {
+  const meetings = await ifsca.fetchUacMeetings();
+
+  const { data: existRows, error } = await supa
+    .from("sez_meetings")
+    .select("id, ifsca_id, agenda_url, minutes_url");
+  if (error) throw error;
+  const existing = new Map((existRows || []).map((r) => [r.ifsca_id, r]));
+  const isFirst = existing.size === 0;
+
+  let added = 0,
+    minutesPublished = 0,
+    agendaPublished = 0;
+
+  for (const m of meetings) {
+    const prev = existing.get(m.ifscaId);
+    if (!prev) {
+      const { data: ins, error: insErr } = await supa
+        .from("sez_meetings")
+        .insert({
+          ifsca_id: m.ifscaId,
+          title: m.title,
+          meeting_date: m.meetingDate,
+          notice_url: m.noticeUrl,
+          agenda_url: m.agendaUrl,
+          approval_url: m.approvalUrl,
+          minutes_url: m.minutesUrl,
+          desk: "SEZ Approvals",
+        })
+        .select("id")
+        .single();
+      if (insErr) throw insErr;
+      added++;
+      if (!isFirst) {
+        changes.push({
+          change_type: "sez_meeting_added",
+          desk: "SEZ Approvals",
+          headline: `UAC approval meeting scheduled: ${m.title}${m.meetingDate ? ` (${m.meetingDate})` : ""}`,
+          category: "SEZ / UAC",
+          ref_table: "sez_meetings",
+          ref_id: ins.id,
+          url: m.agendaUrl || m.noticeUrl || m.minutesUrl || "/desk/sez",
+          detail: { meeting_date: m.meetingDate, has_agenda: !!m.agendaUrl },
+        });
+      }
+    } else {
+      const gotMinutes = m.minutesUrl && !prev.minutes_url;
+      const gotAgenda = m.agendaUrl && !prev.agenda_url;
+      if (gotMinutes || gotAgenda || m.minutesUrl !== prev.minutes_url) {
+        await supa
+          .from("sez_meetings")
+          .update({
+            notice_url: m.noticeUrl,
+            agenda_url: m.agendaUrl,
+            approval_url: m.approvalUrl,
+            minutes_url: m.minutesUrl,
+            meeting_date: m.meetingDate,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", prev.id);
+      }
+      if (!isFirst && gotMinutes) {
+        minutesPublished++;
+        changes.push({
+          change_type: "sez_minutes_published",
+          desk: "SEZ Approvals",
+          headline: `Minutes published — ${m.title} (approvals granted)`,
+          category: "SEZ / UAC",
+          ref_table: "sez_meetings",
+          ref_id: prev.id,
+          url: m.minutesUrl,
+          detail: { meeting_date: m.meetingDate },
+        });
+      }
+      if (!isFirst && gotAgenda) {
+        agendaPublished++;
+        changes.push({
+          change_type: "sez_agenda_published",
+          desk: "SEZ Approvals",
+          headline: `Agenda published — ${m.title} (applicants up for approval)`,
+          category: "SEZ / UAC",
+          ref_table: "sez_meetings",
+          ref_id: prev.id,
+          url: m.agendaUrl,
+          detail: { meeting_date: m.meetingDate },
+        });
+      }
+    }
+  }
+  return { total: meetings.length, added, minutesPublished, agendaPublished, baseline: isFirst };
+}
+
 async function main() {
   const started = new Date();
   const { count } = await supa
@@ -299,12 +391,14 @@ async function main() {
     .single();
 
   const changes = [];
-  let entitySummary, pubSummary, ok = true, errMsg = null;
+  let entitySummary, pubSummary, sezSummary, ok = true, errMsg = null;
   try {
     entitySummary = await ingestEntities(isFull, changes);
     console.log(`Entities: +${entitySummary.added} added, ${entitySummary.removed} removed, ${entitySummary.statusChanges} status changes (of ${entitySummary.total})`);
     pubSummary = await ingestPublications(changes);
     console.log("Publications:", JSON.stringify(pubSummary));
+    sezSummary = await ingestSezMeetings(changes);
+    console.log("SEZ/UAC meetings:", JSON.stringify(sezSummary));
 
     // On the FULL backfill we do NOT flood the change log with ~2200 "new"
     // rows — that's the baseline, not news. Daily runs record everything.
@@ -331,7 +425,7 @@ async function main() {
     .update({
       finished_at: new Date().toISOString(),
       ok,
-      summary: { entitySummary, pubSummary, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
+      summary: { entitySummary, pubSummary, sezSummary, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
     })
     .eq("id", run?.id);
 

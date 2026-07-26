@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DESK_BY_SLUG, deskLabel, fmtDate } from "@/lib/format";
-import { getEntitiesByDesk, getDeskPublications, isEntityDesk } from "@/lib/queries";
+import {
+  getEntitiesByDesk,
+  getDeskPublications,
+  getSezMeetings,
+  isEntityDesk,
+} from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -16,25 +21,67 @@ const BLURB: Record<string, string> = {
   News: "Press releases and news from IFSCA.",
   Consultations: "Public consultation papers open for comment.",
   Surrendered: "Registrations surrendered or cancelled.",
+  "SEZ Approvals":
+    "Unit Approval Committee (UAC) meetings — notices, agendas, approvals and minutes. Signals who is coming to GIFT and who got set-up approval.",
 };
+
+function docLinks(m: {
+  notice_url: string | null;
+  agenda_url: string | null;
+  approval_url: string | null;
+  minutes_url: string | null;
+}) {
+  const docs: [string, string | null][] = [
+    ["Notice", m.notice_url],
+    ["Agenda", m.agenda_url],
+    ["Approval", m.approval_url],
+    ["Minutes", m.minutes_url],
+  ];
+  return docs.filter(([, u]) => u);
+}
 
 export default async function DeskPage({ params }: { params: { desk: string } }) {
   const desk = DESK_BY_SLUG[params.desk];
   if (!desk) notFound();
 
+  const sezMode = desk === "SEZ Approvals";
   const entityMode = isEntityDesk(desk) || desk === "Surrendered";
   const entities = entityMode ? await getEntitiesByDesk(desk, 300) : [];
-  const pubs = entityMode ? [] : await getDeskPublications(desk, 500);
+  const pubs = entityMode || sezMode ? [] : await getDeskPublications(desk, 500);
+  const meetings = sezMode ? await getSezMeetings(200) : [];
 
   return (
     <div style={{ padding: "24px 0" }}>
       <div className="section-head">
         <span>{deskLabel(desk)} Desk</span>
-        <span className="count">{entityMode ? entities.length : pubs.length} entries</span>
+        <span className="count">
+          {(sezMode ? meetings.length : entityMode ? entities.length : pubs.length)} entries
+        </span>
       </div>
       <p style={{ color: "var(--ink-soft)", marginTop: 0, maxWidth: 640 }}>{BLURB[desk]}</p>
 
-      {entityMode ? (
+      {sezMode ? (
+        meetings.length === 0 ? (
+          <p className="empty">No UAC meetings recorded yet.</p>
+        ) : (
+          meetings.map((m) => (
+            <div className="story" key={m.id}>
+              <h3>{m.title}</h3>
+              <div className="meta">
+                {fmtDate(m.meeting_date)}
+                {docLinks(m).map(([label, url]) => (
+                  <span key={label}>
+                    {" · "}
+                    <a className="readmore" href={url!} target="_blank" rel="noopener noreferrer">
+                      {label}
+                    </a>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))
+        )
+      ) : entityMode ? (
         entities.length === 0 ? (
           <p className="empty">No entities recorded yet.</p>
         ) : (

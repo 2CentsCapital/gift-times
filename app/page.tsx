@@ -4,6 +4,7 @@ import {
   getDeskEntities,
   getDeskPublications,
   getRecentChanges,
+  getSezMeetings,
   type Entity,
   type Publication,
 } from "@/lib/queries";
@@ -43,6 +44,45 @@ function PubStory({ p }: { p: Publication }) {
       </h3>
       <div className="meta">{fmtDate(p.publish_date)}</div>
     </div>
+  );
+}
+
+async function SezColumn() {
+  const meetings = await getSezMeetings(6);
+  return (
+    <section>
+      <div className="section-head">
+        <span>SEZ / UAC Approvals</span>
+        <Link className="count" href="/desk/sez" style={{ textDecoration: "none" }}>
+          View all →
+        </Link>
+      </div>
+      {meetings.length === 0 ? (
+        <p className="empty">No meetings yet.</p>
+      ) : (
+        meetings.map((m) => {
+          const link = m.minutes_url || m.agenda_url || m.notice_url;
+          return (
+            <div className="story" key={m.id}>
+              <h3>
+                {link ? (
+                  <a className="title" href={link} target="_blank" rel="noopener noreferrer">
+                    {m.title}
+                  </a>
+                ) : (
+                  m.title
+                )}
+              </h3>
+              <div className="meta">
+                {[fmtDate(m.meeting_date), m.minutes_url ? "Minutes out" : m.agenda_url ? "Agenda out" : "Notice"]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </section>
   );
 }
 
@@ -122,6 +162,7 @@ export default async function FrontPage() {
             <DeskColumn desk="Consultations" kind="pub" />
             <DeskColumn desk="Insurance" kind="entity" />
             <DeskColumn desk="Fintech" kind="entity" />
+            <SezColumn />
           </div>
         </div>
 

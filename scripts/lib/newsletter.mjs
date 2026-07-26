@@ -1,6 +1,7 @@
 // Renders the daily digest into a sectioned newspaper-style HTML email.
 
 const DESK_ORDER = [
+  "SEZ Approvals",
   "Brokers",
   "FMEs",
   "Insurance",
@@ -15,6 +16,7 @@ const DESK_ORDER = [
 ];
 
 const DESK_LABEL = {
+  "SEZ Approvals": "SEZ / UAC Approvals",
   Brokers: "Broker Desk",
   FMEs: "Fund Management",
   Insurance: "Insurance",

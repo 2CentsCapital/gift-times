@@ -157,6 +157,28 @@ export async function fetchConsultations() {
     .filter((r) => r.title);
 }
 
+// ---- SEZ / UAC (Unit Approval Committee) meetings -------------------------
+
+// Each meeting can carry up to four documents: notice, agenda, agenda
+// approval (by circulation) and minutes. Minutes list who got approved;
+// upcoming meetings (future dates) signal who is coming up for approval.
+export async function fetchUacMeetings() {
+  const p = { ...baseParams(500), CategoryType: "UACMeeting", SearchText: "" };
+  const d = await getJson("SezMeeting/GetSezMeetingListData", p);
+  const rows = d.data || [];
+  return rows
+    .map((r) => ({
+      ifscaId: r.SezMeetingId ?? null,
+      title: (r.Title || "").trim(),
+      meetingDate: toIsoDate(r.MeetingDate),
+      noticeUrl: fileUrl(r.NoticeFileId, r.NoticeFileName),
+      agendaUrl: fileUrl(r.AgendaFileId, r.AgendaFileName),
+      approvalUrl: fileUrl(r.CirculationFileId, r.CirculationFileName),
+      minutesUrl: fileUrl(r.MinutesFileId, r.MinutesFileName),
+    }))
+    .filter((r) => r.title && r.ifscaId != null);
+}
+
 // Convenience: every publication feed keyed by kind.
 export async function fetchAllPublications() {
   const out = {};

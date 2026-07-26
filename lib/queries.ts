@@ -37,7 +37,27 @@ export type Publication = {
   desk: string | null;
 };
 
+export type SezMeeting = {
+  id: string;
+  title: string;
+  meeting_date: string | null;
+  notice_url: string | null;
+  agenda_url: string | null;
+  approval_url: string | null;
+  minutes_url: string | null;
+};
+
 const ENTITY_DESKS = ["Brokers", "FMEs", "Insurance", "Fintech", "Banking"];
+
+export async function getSezMeetings(limit = 200): Promise<SezMeeting[]> {
+  const supa = getSupabase();
+  const { data } = await supa
+    .from("sez_meetings")
+    .select("*")
+    .order("meeting_date", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  return (data as SezMeeting[]) || [];
+}
 
 export async function getCounts() {
   const supa = getSupabase();

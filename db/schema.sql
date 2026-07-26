@@ -144,7 +144,36 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- Universal search: entities (by name OR contact person) + publications.
+-- SEZ / UAC (Unit Approval Committee) meetings — notices, agendas, approvals
+-- and minutes. Signals who is coming to GIFT and who got set-up approval.
+-- ---------------------------------------------------------------------------
+create table if not exists sez_meetings (
+  id            uuid primary key default gen_random_uuid(),
+  ifsca_id      bigint unique,
+  title         text not null,
+  meeting_date  date,
+  category_type text default 'UACMeeting',
+  notice_url    text,
+  agenda_url    text,
+  approval_url  text,
+  minutes_url   text,
+  desk          text default 'SEZ Approvals',
+  first_seen    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+create index if not exists sez_meetings_date  on sez_meetings (meeting_date desc nulls last);
+create index if not exists sez_meetings_title on sez_meetings using gin (title gin_trgm_ops);
+
+alter table sez_meetings enable row level security;
+do $$
+begin
+  if not exists (select 1 from pg_policies where tablename='sez_meetings' and policyname='public_read') then
+    create policy public_read on sez_meetings for select using (true);
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Universal search: entities (by name OR contact person) + publications + SEZ.
 -- Returns a unified result set for the site's search box.
 -- ---------------------------------------------------------------------------
 create or replace function search_all(q text)
@@ -181,6 +210,13 @@ as $$
          initcap(pub.kind), pub.desk, null, pub.publish_date
   from publications pub
   where pub.title ilike '%'||q||'%'
+
+  union all
+
+  select 'sez'::text, s.id, s.title,
+         'SEZ / UAC Approval', s.desk, null, s.meeting_date
+  from sez_meetings s
+  where s.title ilike '%'||q||'%'
 
   order by 7 desc nulls last
   limit 100;

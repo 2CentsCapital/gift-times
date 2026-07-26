@@ -34,7 +34,11 @@ export default async function SearchPage({
           ) : (
             results.map((r: any, i: number) => {
               const href =
-                r.result_type === "publication" ? undefined : `/entity/${r.id}`;
+                r.result_type === "entity" || r.result_type === "person"
+                  ? `/entity/${r.id}`
+                  : r.result_type === "sez"
+                  ? "/desk/sez"
+                  : undefined;
               const title = (
                 <h3>
                   {href ? (
@@ -53,6 +57,8 @@ export default async function SearchPage({
                       ? "Person"
                       : r.result_type === "publication"
                       ? "Document"
+                      : r.result_type === "sez"
+                      ? "SEZ / UAC"
                       : "Entity"}
                   </span>
                   {title}
