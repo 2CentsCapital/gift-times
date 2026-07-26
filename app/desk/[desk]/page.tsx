@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DESK_BY_SLUG, deskLabel, fmtDate } from "@/lib/format";
+import { DESK_BY_SLUG, deskLabel, fmtDate, sezStatusColors } from "@/lib/format";
 import {
   getEntitiesByDesk,
   getDeskPublications,
@@ -64,22 +64,45 @@ export default async function DeskPage({ params }: { params: { desk: string } })
         meetings.length === 0 ? (
           <p className="empty">No UAC meetings recorded yet.</p>
         ) : (
-          meetings.map((m) => (
-            <div className="story" key={m.id}>
-              <h3>{m.title}</h3>
-              <div className="meta">
-                {fmtDate(m.meeting_date)}
-                {docLinks(m).map(([label, url]) => (
-                  <span key={label}>
-                    {" · "}
-                    <a className="readmore" href={url!} target="_blank" rel="noopener noreferrer">
-                      {label}
-                    </a>
+          meetings.map((m) => {
+            const sc = sezStatusColors(m.status);
+            return (
+              <div className="story" key={m.id}>
+                <h3>
+                  {m.title}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      fontFamily: "var(--sans)",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: 0.5,
+                      textTransform: "uppercase",
+                      color: sc.color,
+                      background: sc.bg,
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      marginLeft: 10,
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    {m.status || "—"}
                   </span>
-                ))}
+                </h3>
+                <div className="meta">
+                  {fmtDate(m.meeting_date)}
+                  {docLinks(m).map(([label, url]) => (
+                    <span key={label}>
+                      {" · "}
+                      <a className="readmore" href={url!} target="_blank" rel="noopener noreferrer">
+                        {label}
+                      </a>
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )
       ) : entityMode ? (
         entities.length === 0 ? (

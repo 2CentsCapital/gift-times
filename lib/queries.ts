@@ -41,6 +41,7 @@ export type SezMeeting = {
   id: string;
   title: string;
   meeting_date: string | null;
+  status: string | null;
   notice_url: string | null;
   agenda_url: string | null;
   approval_url: string | null;

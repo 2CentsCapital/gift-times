@@ -8,7 +8,7 @@ import {
   type Entity,
   type Publication,
 } from "@/lib/queries";
-import { fmtDate, deskLabel } from "@/lib/format";
+import { fmtDate, deskLabel, sezStatusColors } from "@/lib/format";
 import Subscribe from "@/components/Subscribe";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +61,11 @@ async function SezColumn() {
         <p className="empty">No meetings yet.</p>
       ) : (
         meetings.map((m) => {
-          const link = m.minutes_url || m.agenda_url || m.notice_url;
+          const link =
+            m.status === "Minutes Out"
+              ? m.minutes_url || m.agenda_url || m.notice_url
+              : m.agenda_url || m.notice_url || m.minutes_url;
+          const sc = sezStatusColors(m.status);
           return (
             <div className="story" key={m.id}>
               <h3>
@@ -74,9 +78,24 @@ async function SezColumn() {
                 )}
               </h3>
               <div className="meta">
-                {[fmtDate(m.meeting_date), m.minutes_url ? "Minutes out" : m.agenda_url ? "Agenda out" : "Notice"]
-                  .filter(Boolean)
-                  .join(" · ")}
+                <span
+                  style={{
+                    display: "inline-block",
+                    fontFamily: "var(--sans)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: 0.5,
+                    textTransform: "uppercase",
+                    color: sc.color,
+                    background: sc.bg,
+                    padding: "1px 7px",
+                    borderRadius: 999,
+                    marginRight: 6,
+                  }}
+                >
+                  {m.status || "—"}
+                </span>
+                {fmtDate(m.meeting_date)}
               </div>
             </div>
           );

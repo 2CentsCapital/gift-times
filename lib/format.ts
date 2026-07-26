@@ -44,6 +44,20 @@ export function fmtDate(iso?: string | null): string {
   });
 }
 
+// Colours for the SEZ/UAC meeting status pill.
+export function sezStatusColors(status?: string | null): { color: string; bg: string } {
+  switch (status) {
+    case "Minutes Out":
+      return { color: "#2f6b34", bg: "#e7f0e5" };
+    case "Held":
+      return { color: "#8a5a12", bg: "#f5ecd9" };
+    case "Scheduled":
+      return { color: "#1f4e7a", bg: "#e3edf5" };
+    default:
+      return { color: "var(--muted)", bg: "transparent" };
+  }
+}
+
 export function longDate(d = new Date()): string {
   return d.toLocaleDateString("en-IN", {
     weekday: "long",

@@ -284,96 +284,115 @@ async function ingestPublications(changes) {
   return summary;
 }
 
+function sezFmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00Z");
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+// Lifecycle: Scheduled (upcoming) -> Held (date passed, no minutes) -> Minutes Out.
+function sezStatus(meetingDateIso, hasMinutes, todayIso) {
+  if (hasMinutes) return "Minutes Out";
+  if (meetingDateIso && meetingDateIso <= todayIso) return "Held";
+  return "Scheduled";
+}
+
+function sezPrimaryLink(m, status) {
+  if (status === "Minutes Out") return m.minutesUrl || m.agendaUrl || m.noticeUrl;
+  return m.agendaUrl || m.noticeUrl || m.minutesUrl;
+}
+
+function sezHeadline(title, status, dateIso) {
+  const d = sezFmtDate(dateIso);
+  if (status === "Minutes Out")
+    return `${title} — minutes published${d ? ` (met ${d})` : ""}: approvals granted`;
+  if (status === "Held") return `${title} held${d ? ` on ${d}` : ""} — minutes awaited`;
+  return `${title} scheduled${d ? ` for ${d}` : ""}`;
+}
+
 async function ingestSezMeetings(changes) {
   const meetings = await ifsca.fetchUacMeetings();
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const { data: existRows, error } = await supa
     .from("sez_meetings")
-    .select("id, ifsca_id, agenda_url, minutes_url");
+    .select("id, ifsca_id, status, minutes_url");
   if (error) throw error;
   const existing = new Map((existRows || []).map((r) => [r.ifsca_id, r]));
   const isFirst = existing.size === 0;
 
-  let added = 0,
-    minutesPublished = 0,
-    agendaPublished = 0;
+  const counts = { added: 0, scheduled: 0, held: 0, minutes: 0 };
 
   for (const m of meetings) {
+    const status = sezStatus(m.meetingDate, !!m.minutesUrl, todayIso);
     const prev = existing.get(m.ifscaId);
+    const row = {
+      title: m.title,
+      meeting_date: m.meetingDate,
+      notice_url: m.noticeUrl,
+      agenda_url: m.agendaUrl,
+      approval_url: m.approvalUrl,
+      minutes_url: m.minutesUrl,
+      status,
+      desk: "SEZ Approvals",
+    };
+
     if (!prev) {
       const { data: ins, error: insErr } = await supa
         .from("sez_meetings")
-        .insert({
-          ifsca_id: m.ifscaId,
-          title: m.title,
-          meeting_date: m.meetingDate,
-          notice_url: m.noticeUrl,
-          agenda_url: m.agendaUrl,
-          approval_url: m.approvalUrl,
-          minutes_url: m.minutesUrl,
-          desk: "SEZ Approvals",
-        })
+        .insert({ ifsca_id: m.ifscaId, ...row })
         .select("id")
         .single();
       if (insErr) throw insErr;
-      added++;
+      counts.added++;
       if (!isFirst) {
         changes.push({
-          change_type: "sez_meeting_added",
+          change_type: `sez_${status.toLowerCase().replace(/ /g, "_")}`,
           desk: "SEZ Approvals",
-          headline: `UAC approval meeting scheduled: ${m.title}${m.meetingDate ? ` (${m.meetingDate})` : ""}`,
+          headline: sezHeadline(m.title, status, m.meetingDate),
           category: "SEZ / UAC",
           ref_table: "sez_meetings",
           ref_id: ins.id,
-          url: m.agendaUrl || m.noticeUrl || m.minutesUrl || "/desk/sez",
-          detail: { meeting_date: m.meetingDate, has_agenda: !!m.agendaUrl },
+          url: sezPrimaryLink(m, status) || "/desk/sez",
+          detail: { meeting_date: m.meetingDate, status },
         });
       }
-    } else {
-      const gotMinutes = m.minutesUrl && !prev.minutes_url;
-      const gotAgenda = m.agendaUrl && !prev.agenda_url;
-      if (gotMinutes || gotAgenda || m.minutesUrl !== prev.minutes_url) {
-        await supa
-          .from("sez_meetings")
-          .update({
-            notice_url: m.noticeUrl,
-            agenda_url: m.agendaUrl,
-            approval_url: m.approvalUrl,
-            minutes_url: m.minutesUrl,
-            meeting_date: m.meetingDate,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", prev.id);
-      }
-      if (!isFirst && gotMinutes) {
-        minutesPublished++;
-        changes.push({
-          change_type: "sez_minutes_published",
-          desk: "SEZ Approvals",
-          headline: `Minutes published — ${m.title} (approvals granted)`,
-          category: "SEZ / UAC",
-          ref_table: "sez_meetings",
-          ref_id: prev.id,
-          url: m.minutesUrl,
-          detail: { meeting_date: m.meetingDate },
-        });
-      }
-      if (!isFirst && gotAgenda) {
-        agendaPublished++;
-        changes.push({
-          change_type: "sez_agenda_published",
-          desk: "SEZ Approvals",
-          headline: `Agenda published — ${m.title} (applicants up for approval)`,
-          category: "SEZ / UAC",
-          ref_table: "sez_meetings",
-          ref_id: prev.id,
-          url: m.agendaUrl,
-          detail: { meeting_date: m.meetingDate },
-        });
-      }
+      continue;
+    }
+
+    // Update stored row when docs or status change.
+    if (m.minutesUrl !== prev.minutes_url || status !== prev.status) {
+      await supa
+        .from("sez_meetings")
+        .update({ ...row, updated_at: new Date().toISOString() })
+        .eq("id", prev.id);
+    }
+
+    // Log a mailer/site event only on a real status transition (prev.status
+    // is null on the first run after adding the column -> silent backfill).
+    if (!isFirst && prev.status && status !== prev.status) {
+      if (status === "Minutes Out") counts.minutes++;
+      else if (status === "Held") counts.held++;
+      else counts.scheduled++;
+      changes.push({
+        change_type: `sez_${status.toLowerCase().replace(/ /g, "_")}`,
+        desk: "SEZ Approvals",
+        headline: sezHeadline(m.title, status, m.meetingDate),
+        category: "SEZ / UAC",
+        ref_table: "sez_meetings",
+        ref_id: prev.id,
+        url: sezPrimaryLink(m, status) || "/desk/sez",
+        detail: { meeting_date: m.meetingDate, from: prev.status, to: status },
+      });
     }
   }
-  return { total: meetings.length, added, minutesPublished, agendaPublished, baseline: isFirst };
+  return { total: meetings.length, ...counts, baseline: isFirst };
 }
 
 async function main() {

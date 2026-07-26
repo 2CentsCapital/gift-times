@@ -157,10 +157,13 @@ create table if not exists sez_meetings (
   agenda_url    text,
   approval_url  text,
   minutes_url   text,
+  status        text,                    -- Scheduled / Held / Minutes Out
   desk          text default 'SEZ Approvals',
   first_seen    timestamptz default now(),
   updated_at    timestamptz default now()
 );
+-- add column for pre-existing installs (create table if-not-exists won't)
+alter table sez_meetings add column if not exists status text;
 create index if not exists sez_meetings_date  on sez_meetings (meeting_date desc nulls last);
 create index if not exists sez_meetings_title on sez_meetings using gin (title gin_trgm_ops);
 
