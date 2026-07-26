@@ -14,5 +14,13 @@ export function getSupabase() {
   if (!url || !key) {
     throw new Error("Supabase env not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).");
   }
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    // Never let Next.js's Data Cache serve stale PostgREST responses — this
+    // app always wants live data (and new columns must appear immediately).
+    global: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: "no-store" }),
+    },
+  });
 }
