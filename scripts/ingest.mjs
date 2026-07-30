@@ -322,12 +322,24 @@ async function ingestSezMeetings(changes) {
 
   const { data: existRows, error } = await supa
     .from("sez_meetings")
-    .select("id, ifsca_id, status, minutes_url");
+    .select("id, ifsca_id, status, notice_url, agenda_url, approval_url, minutes_url");
   if (error) throw error;
   const existing = new Map((existRows || []).map((r) => [r.ifsca_id, r]));
   const isFirst = existing.size === 0;
 
-  const counts = { added: 0, scheduled: 0, held: 0, minutes: 0 };
+  const counts = { added: 0, statusChanges: 0, docsPublished: 0 };
+
+  const pushEvent = (id, type, headline, url, m, extra = {}) =>
+    changes.push({
+      change_type: type,
+      desk: "SEZ Approvals",
+      headline,
+      category: "SEZ / UAC",
+      ref_table: "sez_meetings",
+      ref_id: id,
+      url: url || "/desk/sez",
+      detail: { meeting_date: m.meetingDate, ...extra },
+    });
 
   for (const m of meetings) {
     const status = sezStatus(m.meetingDate, !!m.minutesUrl, todayIso);
@@ -352,44 +364,69 @@ async function ingestSezMeetings(changes) {
       if (insErr) throw insErr;
       counts.added++;
       if (!isFirst) {
-        changes.push({
-          change_type: `sez_${status.toLowerCase().replace(/ /g, "_")}`,
-          desk: "SEZ Approvals",
-          headline: sezHeadline(m.title, status, m.meetingDate),
-          category: "SEZ / UAC",
-          ref_table: "sez_meetings",
-          ref_id: ins.id,
-          url: sezPrimaryLink(m, status) || "/desk/sez",
-          detail: { meeting_date: m.meetingDate, status },
-        });
+        pushEvent(
+          ins.id,
+          `sez_${status.toLowerCase().replace(/ /g, "_")}`,
+          sezHeadline(m.title, status, m.meetingDate),
+          sezPrimaryLink(m, status),
+          m,
+          { status }
+        );
       }
       continue;
     }
 
-    // Update stored row when docs or status change.
-    if (m.minutesUrl !== prev.minutes_url || status !== prev.status) {
+    // Detect newly-published documents and status transitions.
+    const gotAgenda = m.agendaUrl && !prev.agenda_url;
+    const gotApproval = m.approvalUrl && !prev.approval_url;
+    const statusChanged = !!prev.status && status !== prev.status;
+    const docsChanged =
+      m.noticeUrl !== prev.notice_url ||
+      m.agendaUrl !== prev.agenda_url ||
+      m.approvalUrl !== prev.approval_url ||
+      m.minutesUrl !== prev.minutes_url;
+
+    if (docsChanged || status !== prev.status) {
       await supa
         .from("sez_meetings")
         .update({ ...row, updated_at: new Date().toISOString() })
         .eq("id", prev.id);
     }
 
-    // Log a mailer/site event only on a real status transition (prev.status
-    // is null on the first run after adding the column -> silent backfill).
-    if (!isFirst && prev.status && status !== prev.status) {
-      if (status === "Minutes Out") counts.minutes++;
-      else if (status === "Held") counts.held++;
-      else counts.scheduled++;
-      changes.push({
-        change_type: `sez_${status.toLowerCase().replace(/ /g, "_")}`,
-        desk: "SEZ Approvals",
-        headline: sezHeadline(m.title, status, m.meetingDate),
-        category: "SEZ / UAC",
-        ref_table: "sez_meetings",
-        ref_id: prev.id,
-        url: sezPrimaryLink(m, status) || "/desk/sez",
-        detail: { meeting_date: m.meetingDate, from: prev.status, to: status },
-      });
+    if (isFirst) continue; // silent baseline
+
+    // Document-publication events (agenda / approval). Minutes are covered by
+    // the status -> "Minutes Out" transition below to avoid a duplicate.
+    if (gotAgenda) {
+      counts.docsPublished++;
+      pushEvent(
+        prev.id,
+        "sez_agenda_out",
+        `Agenda published — ${m.title} (applicants up for approval)`,
+        m.agendaUrl,
+        m
+      );
+    }
+    if (gotApproval) {
+      counts.docsPublished++;
+      pushEvent(
+        prev.id,
+        "sez_approval_out",
+        `Agenda approved by circulation — ${m.title}`,
+        m.approvalUrl,
+        m
+      );
+    }
+    if (statusChanged) {
+      counts.statusChanges++;
+      pushEvent(
+        prev.id,
+        `sez_${status.toLowerCase().replace(/ /g, "_")}`,
+        sezHeadline(m.title, status, m.meetingDate),
+        sezPrimaryLink(m, status),
+        m,
+        { from: prev.status, to: status }
+      );
     }
   }
   return { total: meetings.length, ...counts, baseline: isFirst };
