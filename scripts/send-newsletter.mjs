@@ -1,9 +1,13 @@
-// Sends the 6am daily digest via Resend.
+// Sends an edition (morning / evening) via Resend.
+//
+// Sends every change LOGGED SINCE THE LAST SEND (a watermark), so multiple
+// editions per day never duplicate items and never miss any.
 //
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY,
 //      FROM_EMAIL (e.g. "The GIFT Times <onboarding@resend.dev>"),
 //      OWNER_EMAIL, SITE_URL, [SEND_EMPTY=false]
 // Run: node scripts/send-newsletter.mjs [--force]
+//   --force ignores the watermark and sends everything from the last 24h.
 
 import { supa } from "./lib/supabase.mjs";
 import { buildNewsletter } from "./lib/newsletter.mjs";
@@ -13,8 +17,16 @@ const SITE_URL = (process.env.SITE_URL || "https://gift-times.vercel.app").repla
 const FROM = process.env.FROM_EMAIL || "The GIFT Times <onboarding@resend.dev>";
 const SEND_EMPTY = (process.env.SEND_EMPTY || "false").toLowerCase() === "true";
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+// Timestamp of the previous send = our watermark. Changes created after this
+// are what's "new" for this edition.
+async function lastSendAt() {
+  const { data } = await supa
+    .from("newsletter_sends")
+    .select("sent_at")
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.sent_at || null;
 }
 
 async function recipients() {
@@ -44,36 +56,33 @@ async function sendEmail(to, subject, html) {
 
 async function main() {
   if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
-  const today = todayIso();
+  const today = new Date().toISOString().slice(0, 10);
+  const nowIso = new Date().toISOString();
 
-  if (!FORCE) {
-    const { data: prior } = await supa
-      .from("newsletter_sends")
-      .select("id")
-      .eq("send_date", today)
-      .maybeSingle();
-    if (prior) {
-      console.log(`Already sent for ${today}. Use --force to resend.`);
-      return;
-    }
-  }
+  // Watermark: everything logged since the previous send. --force falls back
+  // to a 24h window regardless of the watermark (for manual re-sends).
+  const watermark = await lastSendAt();
+  const since = FORCE
+    ? new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    : watermark || new Date(Date.now() - 24 * 3600 * 1000).toISOString();
 
-  // changes from the last 24h (yesterday + today, deduped by row).
-  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
   const { data: changes, error } = await supa
     .from("changes")
     .select("*")
-    .gte("occurred_on", since)
+    .gt("created_at", since)
     .order("desk", { ascending: true })
     .order("created_at", { ascending: false });
   if (error) throw error;
 
   if (!changes.length && !SEND_EMPTY) {
-    console.log("No changes in the last 24h — skipping send (set SEND_EMPTY=true to send anyway).");
-    await supa.from("newsletter_sends").upsert(
-      { send_date: today, recipient_count: 0, change_count: 0 },
-      { onConflict: "send_date" }
-    );
+    console.log(`No new changes since ${since} — skipping send.`);
+    // Advance the watermark so the next edition starts from now.
+    await supa.from("newsletter_sends").insert({
+      send_date: today,
+      sent_at: nowIso,
+      recipient_count: 0,
+      change_count: 0,
+    });
     return;
   }
 
@@ -95,12 +104,14 @@ async function main() {
       console.error(`  ! send failed to ${addr}: ${e.message}`);
     }
   }
-  console.log(`Sent "${subject}" to ${sent}/${to.length} recipient(s).`);
+  console.log(`Sent "${subject}" (${changes.length} items) to ${sent}/${to.length} recipient(s).`);
 
-  await supa.from("newsletter_sends").upsert(
-    { send_date: today, recipient_count: sent, change_count: changes.length },
-    { onConflict: "send_date" }
-  );
+  await supa.from("newsletter_sends").insert({
+    send_date: today,
+    sent_at: nowIso,
+    recipient_count: sent,
+    change_count: changes.length,
+  });
 }
 
 main().catch((e) => {

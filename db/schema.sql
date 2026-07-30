@@ -112,11 +112,14 @@ create table if not exists ingest_runs (
 
 create table if not exists newsletter_sends (
   id              uuid primary key default gen_random_uuid(),
-  send_date       date unique,
+  send_date       date,
   sent_at         timestamptz default now(),
   recipient_count int,
   change_count    int
 );
+-- Allow multiple sends per day (morning + evening editions): drop the old
+-- once-per-day unique lock if a previous schema created it.
+alter table newsletter_sends drop constraint if exists newsletter_sends_send_date_key;
 
 -- ---------------------------------------------------------------------------
 -- Row Level Security: public read for the site's content; writes stay on the
