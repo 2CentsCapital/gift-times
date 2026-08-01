@@ -8,6 +8,7 @@ export const DESKS: { slug: string; label: string; blurb: string }[] = [
   { slug: "regulations", label: "Regulations", blurb: "Regulations & notices" },
   { slug: "news", label: "News", blurb: "Press releases" },
   { slug: "consultations", label: "Consultations", blurb: "Consultation papers" },
+  { slug: "tenders", label: "Tenders", blurb: "Tenders & procurement" },
   { slug: "sez", label: "SEZ Approvals", blurb: "UAC meetings & approvals" },
 ];
 
@@ -21,6 +22,7 @@ export const DESK_BY_SLUG: Record<string, string> = {
   regulations: "Regulations",
   news: "News",
   consultations: "Consultations",
+  tenders: "Tenders",
   sez: "SEZ Approvals",
   surrendered: "Surrendered",
   other: "Other",

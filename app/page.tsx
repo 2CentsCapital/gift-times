@@ -178,6 +178,7 @@ export default async function FrontPage() {
             <DeskColumn desk="Circulars" kind="pub" />
             <DeskColumn desk="Regulations" kind="pub" />
             <DeskColumn desk="News" kind="pub" />
+            <DeskColumn desk="Tenders" kind="pub" />
             <DeskColumn desk="Consultations" kind="pub" />
             <DeskColumn desk="Insurance" kind="entity" />
             <DeskColumn desk="Fintech" kind="entity" />

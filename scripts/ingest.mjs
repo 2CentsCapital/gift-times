@@ -20,6 +20,7 @@ const LEGAL_KIND = {
   "AML/CFT/KYC": "aml",
   News: "news",
   Consultation: "consultation",
+  Tender: "tender",
 };
 
 function deskForEntity(category) {
@@ -49,6 +50,7 @@ function deskForPub(kind) {
     return "Regulations";
   if (kind === "news") return "News";
   if (kind === "consultation") return "Consultations";
+  if (kind === "tender") return "Tenders";
   return "Other";
 }
 
@@ -246,6 +248,9 @@ async function ingestPublications(changes) {
       .eq("kind", kind);
     if (error) throw error;
     const existing = new Set((existRows || []).map((r) => r.ifsca_id));
+    // First time we ingest a given kind (e.g. a newly-added feed): seed it
+    // silently so we don't flood the change log with the whole back-catalogue.
+    const isFirstKind = existing.size === 0;
 
     const fresh = rows.filter((r) => r.ifscaId != null && !existing.has(r.ifscaId));
     if (fresh.length) {
@@ -265,7 +270,7 @@ async function ingestPublications(changes) {
         .select("id, title, publish_date, file_url");
       if (insErr) throw insErr;
 
-      for (const p of inserted || []) {
+      for (const p of isFirstKind ? [] : inserted || []) {
         changes.push({
           change_type: "publication_added",
           desk,

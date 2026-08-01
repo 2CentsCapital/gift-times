@@ -179,6 +179,21 @@ export async function fetchUacMeetings() {
     .filter((r) => r.title && r.ifscaId != null);
 }
 
+// Tenders & Procurement (RFPs, bid invites, corrigenda, results).
+export async function fetchTenders() {
+  const p = { ...baseParams(1000), SearchText: "" };
+  const d = await getJson("Tender/GetTenderListData", p);
+  const rows = d.data || [];
+  return rows
+    .map((r) => ({
+      ifscaId: r.TenderId ?? null,
+      title: (r.Title || "").trim(),
+      publishDate: toIsoDate(r.ActiveDate),
+      fileUrl: fileUrl(r.PhotoFileID, r.PhotoFileName),
+    }))
+    .filter((r) => r.title && r.ifscaId != null);
+}
+
 // Convenience: every publication feed keyed by kind.
 export async function fetchAllPublications() {
   const out = {};
@@ -187,5 +202,6 @@ export async function fetchAllPublications() {
   }
   out["News"] = await fetchNews();
   out["Consultation"] = await fetchConsultations();
+  out["Tender"] = await fetchTenders();
   return out;
 }
