@@ -1,77 +1,46 @@
-// One-off discovery: enumerate IFSCA's site sections, controllers and any
-// subscription/notification categories, so we can see what we don't track.
-// Run on a network that can reach ifsca.gov.in (e.g. GitHub Actions).
-
+// Pass 2: label the ReportPublication category tabs + confirm other feeds.
 const BASE = "https://ifsca.gov.in";
-const H = { "X-Requested-With": "XMLHttpRequest", "User-Agent": "Mozilla/5.0 gift-times-discover" };
+const H = { "X-Requested-With": "XMLHttpRequest", "User-Agent": "Mozilla/5.0 discover" };
 
-async function text(url, opts = {}) {
-  try {
-    const r = await fetch(url, { headers: H, ...opts });
-    return { status: r.status, body: await r.text() };
-  } catch (e) {
-    return { status: "ERR", body: e.message };
+async function json(url) {
+  try { const r = await fetch(url, { headers: H }); return { s: r.status, j: await r.json() }; }
+  catch (e) { return { s: "ERR", j: null, e: e.message }; }
+}
+async function text(url) {
+  try { const r = await fetch(url, { headers: H }); return { s: r.status, t: await r.text() }; }
+  catch (e) { return { s: "ERR", t: "", e: e.message }; }
+}
+function p(len, enc, extra = {}) {
+  return new URLSearchParams({ draw: "1", start: "0", length: String(len),
+    "order[0][column]": "0", "order[0][dir]": "desc", PageNumber: "1", PageSize: String(len),
+    SearchText: "", EncryptedId: enc, ...extra }).toString();
+}
+
+console.log("===== ReportPublication category tabs (label by sample titles) =====");
+const rpIds = ["aadg9ruDI%20M=", "sKCVtbX6J9o=", "E4H-JzPpHlE=", "zcGvy-Iqfcg=",
+  "wF6kttc1JR8=", "mizvnmwVAgs=", "MEdJSLhva0M="];
+for (const enc of rpIds) {
+  const { s, j } = await json(`${BASE}/ReportPublication/GetReportPublicationData?${p(3, enc)}`);
+  const list = j?.data?.reportandPublicationModels || [];
+  const total = list[0]?.PaginationRequest?.TotalRecord ?? list.length;
+  const titles = list.slice(0, 3).map((x) => (x.Title || "").trim().slice(0, 55));
+  console.log(`\n[${enc}] status=${s} total=${total}`);
+  titles.forEach((t) => console.log("   • " + t));
+}
+
+console.log("\n\n===== Other candidate controllers: find their data endpoint via CustomJS =====");
+for (const ctrl of ["InformalGuidance", "Speeches", "Career", "AlertsAgainstScams", "Alert", "Orders", "Enforcement"]) {
+  const { s, t } = await text(`${BASE}/${ctrl}/Index`);
+  if (s !== 200) { console.log(`\n${ctrl}/Index -> ${s}`); continue; }
+  const js = [...new Set((t.match(/\/CustomJS\/[A-Za-z0-9_]+\.js/g) || []))];
+  const endpoints = [...new Set((t.match(/[A-Za-z]+\/Get[A-Za-z]+Data/g) || []))];
+  console.log(`\n${ctrl}/Index -> 200 | inline endpoints: ${endpoints.join(", ") || "-"} | customJS: ${js.join(", ") || "-"}`);
+  // pull endpoint refs from the CustomJS files too
+  for (const j of js) {
+    const { t: jt } = await text(`${BASE}${j}`);
+    const eps = [...new Set((jt.match(/[A-Za-z]+\/Get[A-Za-z]+[A-Za-z]*Data/g) || []))];
+    if (eps.length) console.log(`     ${j} -> ${eps.join(", ")}`);
   }
-}
-
-function uniq(a) { return [...new Set(a)]; }
-
-// 1) Full menu (all sections + controllers)
-console.log("\n===== MENU (BindMenu) =====");
-{
-  const { body } = await text(`${BASE}/Home/BindMenu`, { method: "POST" });
-  const links = [];
-  const re = /href=["']([^"']+)["'][^>]*>([^<]{2,60})</g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const url = m[1].trim(), txt = m[2].replace(/\s+/g, " ").trim();
-    if (url && url !== "#" && txt) links.push(`${txt}  =>  ${url}`);
-  }
-  console.log(uniq(links).join("\n"));
-}
-
-// 2) Homepage: look for subscribe links + any "category" mentions
-console.log("\n===== HOMEPAGE subscribe / category hints =====");
-{
-  const { body } = await text(`${BASE}/`);
-  const hints = uniq(
-    (body.match(/(subscrib|notification|category|categories|newsletter|alert)[^<>"']{0,40}/gi) || [])
-      .map((s) => s.trim())
-  ).slice(0, 40);
-  console.log(hints.join("\n"));
-  const subLinks = uniq((body.match(/href=["']([^"']*(subscrib|notif|categ)[^"']*)["']/gi) || []));
-  console.log("\nsubscribe-ish links:", subLinks.join(" | ") || "(none in homepage HTML)");
-}
-
-// 3) Probe candidate subscription endpoints
-console.log("\n===== SUBSCRIPTION ENDPOINT PROBES =====");
-for (const path of [
-  "Home/Subscribe", "Subscribe", "Subscription", "Home/Subscription",
-  "Home/GetSubscriptionCategory", "Home/GetCategory", "Home/GetCategories",
-  "Subscriber/Index", "Notification/Subscribe", "Home/NewSection",
-]) {
-  const { status, body } = await text(`${BASE}/${path}`);
-  const looksJson = body.trim().startsWith("{") || body.trim().startsWith("[");
-  console.log(`${path} -> ${status}${looksJson ? " [JSON] " + body.slice(0, 200) : ""}`);
-}
-
-// 4) ReportPublication: discover its category tabs (we only track consultations)
-console.log("\n===== ReportPublication categories (tabs) =====");
-{
-  const { body } = await text(`${BASE}/ReportPublication/index/sKCVtbX6J9o=`);
-  // tabs usually carry EncryptedId in hrefs like /ReportPublication/index/XXXX=
-  const cats = uniq((body.match(/ReportPublication\/index\/[^"'\s>]+/gi) || []));
-  console.log("report/pub category links:", cats.join("\n") || "(none found in HTML)");
-  const tabTexts = uniq((body.match(/>([A-Z][A-Za-z &/,-]{3,45})</g) || []).map(s => s.replace(/[<>]/g, "").trim())).slice(0, 40);
-  console.log("\nnearby labels:", tabTexts.join(" | "));
-}
-
-// 5) Legal: confirm all category tabs
-console.log("\n===== Legal categories =====");
-{
-  const { body } = await text(`${BASE}/Legal/Index/wF6kttc1JR8=`);
-  const cats = uniq((body.match(/Legal\/Index\/[^"'\s>]+/gi) || []));
-  console.log(cats.join("\n") || "(none)");
 }
 
 console.log("\n===== DONE =====");
