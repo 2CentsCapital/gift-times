@@ -275,7 +275,6 @@ async function ingestPublications(changes) {
           ref_id: p.id,
           url: p.file_url || `/desk/${desk.toLowerCase()}`,
           detail: { publish_date: p.publish_date },
-          occurred_on: p.publish_date || undefined,
         });
       }
     }
