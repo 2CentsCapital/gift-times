@@ -12,6 +12,10 @@ const DESK_ORDER = [
   "News",
   "Tenders",
   "Consultations",
+  "Reports",
+  "Guidance",
+  "Speeches",
+  "Careers",
   "Surrendered",
   "Other",
 ];
@@ -28,6 +32,10 @@ const DESK_LABEL = {
   News: "News & Press",
   Tenders: "Tenders & Procurement",
   Consultations: "Consultation Papers",
+  Reports: "Reports & Studies",
+  Guidance: "Informal Guidance",
+  Speeches: "Speeches",
+  Careers: "Careers & Vacancies",
   Surrendered: "Surrenders & Cancellations",
   Other: "Other",
 };

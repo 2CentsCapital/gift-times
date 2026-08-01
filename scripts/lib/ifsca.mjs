@@ -179,6 +179,76 @@ export async function fetchUacMeetings() {
     .filter((r) => r.title && r.ifscaId != null);
 }
 
+// Other Report & Publication categories (same endpoint as consultations,
+// keyed by EncryptedId): studies/reports, annual reports, bulletins.
+export const REPORT_CATEGORIES = {
+  Report: "mizvnmwVAgs=", // Reports / Studies / Research
+  AnnualReport: "zcGvy-Iqfcg=", // Annual Reports
+  Bulletin: "wF6kttc1JR8=", // IFSCA Bulletin (quarterly)
+};
+
+export async function fetchReportCategory(encId) {
+  const p = { ...baseParams(1000), EncryptedId: encId, SearchText: "" };
+  const d = await getJson("ReportPublication/GetReportPublicationData", p);
+  const rows = (d && d.data && d.data.reportandPublicationModels) || [];
+  return rows
+    .map((r) => ({
+      ifscaId: r.RPId ?? null,
+      title: (r.Title || "").trim(),
+      publishDate: toIsoDate(r.PublishDate),
+      fileUrl: fileUrl(r.PhotoFileID, r.PhotoFileName),
+    }))
+    .filter((r) => r.title && r.ifscaId != null);
+}
+
+// Speeches by IFSCA leadership.
+export async function fetchSpeeches() {
+  const p = { ...baseParams(1000), SearchText: "" };
+  const d = await getJson("speeches/GetspeechesData", p);
+  const rows = (d && d.data && d.data.SpeechesMasterModelList) || [];
+  return rows
+    .map((r) => ({
+      ifscaId: r.SpeecheID ?? null,
+      title: (r.Title || "").trim(),
+      publishDate: toIsoDate(r.PublishDate),
+      fileUrl: fileUrl(r.PhotoFileID, r.PhotoFileName),
+    }))
+    .filter((r) => r.title && r.ifscaId != null);
+}
+
+// Careers / vacancy notices.
+export async function fetchCareers() {
+  const p = { ...baseParams(1000), SearchText: "" };
+  const d = await getJson("Career/GetCareerListData", p);
+  const rows = Array.isArray(d?.data) ? d.data : [];
+  return rows
+    .map((r) => ({
+      ifscaId: r.CareerId ?? null,
+      title: (r.Title || "").trim(),
+      publishDate: toIsoDate(r.PublishedDate || r.PublishDate),
+      fileUrl: fileUrl(r.PhotoFileID, r.PhotoFileName),
+    }))
+    .filter((r) => r.title && r.ifscaId != null);
+}
+
+// Informal Guidance (interpretive letters). Currently 0 published; mapped
+// defensively so the first one is captured whenever IFSCA posts it.
+export async function fetchInformalGuidance() {
+  const p = { ...baseParams(1000), SearchText: "" };
+  const d = await getJson("InformalGuidance/GetInformalGuidanceListData", p);
+  const rows = Array.isArray(d?.data)
+    ? d.data
+    : (d?.data && (d.data.informalGuidanceModels || d.data.InformalGuidanceModelList)) || [];
+  return rows
+    .map((r) => ({
+      ifscaId: r.IGId ?? r.InformalGuidanceId ?? r.Id ?? null,
+      title: (r.Title || "").trim(),
+      publishDate: toIsoDate(r.PublishDate || r.PublishedDate || r.ActiveDate),
+      fileUrl: fileUrl(r.PhotoFileID, r.PhotoFileName),
+    }))
+    .filter((r) => r.title && r.ifscaId != null);
+}
+
 // Tenders & Procurement (RFPs, bid invites, corrigenda, results).
 export async function fetchTenders() {
   const p = { ...baseParams(1000), SearchText: "" };
@@ -203,5 +273,11 @@ export async function fetchAllPublications() {
   out["News"] = await fetchNews();
   out["Consultation"] = await fetchConsultations();
   out["Tender"] = await fetchTenders();
+  for (const [label, enc] of Object.entries(REPORT_CATEGORIES)) {
+    out[label] = await fetchReportCategory(enc);
+  }
+  out["Speech"] = await fetchSpeeches();
+  out["Career"] = await fetchCareers();
+  out["InformalGuidance"] = await fetchInformalGuidance();
   return out;
 }

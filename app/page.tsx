@@ -182,6 +182,8 @@ export default async function FrontPage() {
             <DeskColumn desk="Consultations" kind="pub" />
             <DeskColumn desk="Insurance" kind="entity" />
             <DeskColumn desk="Fintech" kind="entity" />
+            <DeskColumn desk="Reports" kind="pub" />
+            <DeskColumn desk="Speeches" kind="pub" />
             <SezColumn />
           </div>
         </div>

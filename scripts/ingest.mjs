@@ -21,6 +21,31 @@ const LEGAL_KIND = {
   News: "news",
   Consultation: "consultation",
   Tender: "tender",
+  Report: "report",
+  AnnualReport: "annual_report",
+  Bulletin: "bulletin",
+  Speech: "speech",
+  Career: "career",
+  InformalGuidance: "informal_guidance",
+};
+
+// Nicer names for change headlines.
+const KIND_LABEL = {
+  circular: "circular",
+  regulation: "regulation",
+  notification: "notification",
+  rules: "rule",
+  guidelines: "guideline",
+  aml: "AML/CFT/KYC update",
+  news: "news item",
+  consultation: "consultation paper",
+  tender: "tender",
+  report: "report / study",
+  annual_report: "annual report",
+  bulletin: "bulletin",
+  speech: "speech",
+  career: "vacancy notice",
+  informal_guidance: "informal guidance",
 };
 
 function deskForEntity(category) {
@@ -51,6 +76,10 @@ function deskForPub(kind) {
   if (kind === "news") return "News";
   if (kind === "consultation") return "Consultations";
   if (kind === "tender") return "Tenders";
+  if (["report", "annual_report", "bulletin"].includes(kind)) return "Reports";
+  if (kind === "speech") return "Speeches";
+  if (kind === "career") return "Careers";
+  if (kind === "informal_guidance") return "Guidance";
   return "Other";
 }
 
@@ -274,7 +303,7 @@ async function ingestPublications(changes) {
         changes.push({
           change_type: "publication_added",
           desk,
-          headline: `New ${kind}: ${p.title}`,
+          headline: `New ${KIND_LABEL[kind] || kind}: ${p.title}`,
           category: label,
           ref_table: "publications",
           ref_id: p.id,
