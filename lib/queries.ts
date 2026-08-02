@@ -60,6 +60,34 @@ export async function getSezMeetings(limit = 200): Promise<SezMeeting[]> {
   return (data as SezMeeting[]) || [];
 }
 
+// Full, honest category breakdown of active entities (sums to total).
+export async function getCategoryCounts(): Promise<{
+  items: { category: string; count: number }[];
+  total: number;
+}> {
+  const supa = getSupabase();
+  const counts: Record<string, number> = {};
+  let total = 0;
+  for (let from = 0; ; from += 1000) {
+    const { data } = await supa
+      .from("entities")
+      .select("category")
+      .eq("status", "Active")
+      .range(from, from + 999);
+    if (!data || data.length === 0) break;
+    for (const e of data) {
+      const c = (e as any).category || "Other";
+      counts[c] = (counts[c] || 0) + 1;
+      total++;
+    }
+    if (data.length < 1000) break;
+  }
+  const items = Object.entries(counts)
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count);
+  return { items, total };
+}
+
 export async function getCounts() {
   const supa = getSupabase();
   const desks = ["Brokers", "FMEs", "Insurance", "Fintech", "Banking"];

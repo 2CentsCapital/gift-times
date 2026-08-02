@@ -43,6 +43,82 @@ export function deskLabel(desk: string): string {
   return desk || "Other";
 }
 
+// Sector colour families — colour encodes what kind of entity it is.
+type Family = "markets" | "bullion" | "banking" | "insurance" | "fintech" | "services";
+const FAMILY_COLOR: Record<Family, string> = {
+  markets: "#7a1f1f",
+  bullion: "#9a6a1a",
+  banking: "#1f5a5f",
+  insurance: "#6a2f5a",
+  fintech: "#2f6b34",
+  services: "#5a5148",
+};
+const CATEGORY_META: Record<string, { label: string; family: Family }> = {
+  "Fund Management": { label: "Fund Management", family: "markets" },
+  "Capital Market Intermediaries": { label: "Brokers & Intermediaries", family: "markets" },
+  "Market Infrastructure Institutions": { label: "Market Infrastructure", family: "markets" },
+  "Metals & Commodities entities": { label: "Metals & Commodities", family: "bullion" },
+  "Qualified Jewellers": { label: "Qualified Jewellers", family: "bullion" },
+  "BATF Service Providers": { label: "Bullion (BATF) Providers", family: "bullion" },
+  Banking: { label: "Banking Units", family: "banking" },
+  "Finance Company": { label: "Finance Companies", family: "banking" },
+  "Payment Service Provider": { label: "Payment Services", family: "banking" },
+  "Payment System Provider": { label: "Payment Systems", family: "banking" },
+  "IFSC Insurance Office (IIO)": { label: "Insurance Offices", family: "insurance" },
+  "IFSC Insurance Intermediary Office (IIIO)": { label: "Insurance Intermediaries", family: "insurance" },
+  "Fintech Sandbox Entities": { label: "Fintech Sandbox", family: "fintech" },
+  "TAS Service Provider": { label: "TAS Providers", family: "services" },
+  "Ancillary Service Provider": { label: "Ancillary Services", family: "services" },
+  "Global In-House Centres": { label: "Global In-House Centres", family: "services" },
+  "Foreign Universities": { label: "Foreign Universities", family: "services" },
+  "KYC Registration Agency": { label: "KYC Agencies", family: "services" },
+};
+
+export function categoryMeta(category: string): { label: string; color: string } {
+  const m = CATEGORY_META[category];
+  const family: Family = m?.family || "services";
+  return { label: m?.label || category, color: FAMILY_COLOR[family] };
+}
+
+export const FAMILY_LEGEND: { label: string; color: string }[] = [
+  { label: "Capital Markets & Funds", color: FAMILY_COLOR.markets },
+  { label: "Bullion & Commodities", color: FAMILY_COLOR.bullion },
+  { label: "Banking & Payments", color: FAMILY_COLOR.banking },
+  { label: "Insurance", color: FAMILY_COLOR.insurance },
+  { label: "Fintech", color: FAMILY_COLOR.fintech },
+  { label: "Enablers & Services", color: FAMILY_COLOR.services },
+];
+
+// Per-desk accent so section headers carry colour, not just maroon.
+const DESK_COLOR: Record<string, string> = {
+  Brokers: "#7a1f1f",
+  FMEs: "#7a1f1f",
+  Insurance: "#6a2f5a",
+  Fintech: "#2f6b34",
+  Banking: "#1f5a5f",
+  Circulars: "#3a4a7a",
+  Regulations: "#6b2f4a",
+  News: "#7a1f1f",
+  Tenders: "#5a5028",
+  Reports: "#2f5a6b",
+  Speeches: "#6b4a2f",
+  Careers: "#4a4a52",
+  Guidance: "#5c3a7a",
+  Consultations: "#5a5a2f",
+  "SEZ Approvals": "#7a3f1f",
+};
+export function deskColor(desk?: string | null): string {
+  return (desk && DESK_COLOR[desk]) || "#7a1f1f";
+}
+
+// "NEW" if the date is within the last `days` days.
+export function isRecent(iso?: string | null, days = 7): boolean {
+  if (!iso) return false;
+  const d = new Date(iso).getTime();
+  if (isNaN(d)) return false;
+  return Date.now() - d < days * 86400 * 1000;
+}
+
 export function fmtDate(iso?: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);

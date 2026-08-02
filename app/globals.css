@@ -128,3 +128,59 @@ a { color: inherit; }
 .pill { display:inline-block; font-family:var(--sans); font-size:10px; letter-spacing:1px; text-transform:uppercase;
   color:var(--accent); border:1px solid var(--accent); padding:2px 8px; border-radius:999px; }
 .empty { color: var(--muted); font-style: italic; padding: 20px 0; }
+
+/* ---- Directory stat band (honest breakdown, sums to total) ---- */
+.statband { padding: 26px 0 30px; border-bottom: 3px double var(--rule-strong); }
+.stat-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+  flex-wrap: wrap; margin-bottom: 22px; }
+.stat-total { display: flex; align-items: baseline; gap: 14px; }
+.stat-total .n { font-family: var(--serif); font-weight: 700; font-size: clamp(44px, 8vw, 82px);
+  line-height: 0.9; letter-spacing: -1px; }
+.stat-total .l { font-family: var(--serif); font-size: 18px; color: var(--ink-soft); max-width: 220px; line-height: 1.15; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-family: var(--sans);
+  font-size: 11px; letter-spacing: .3px; color: var(--ink-soft); }
+.legend-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+.barlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 40px; }
+@media (max-width: 720px){ .barlist { grid-template-columns: 1fr; } }
+.barrow { display: grid; grid-template-columns: 148px 1fr 44px; align-items: center; gap: 12px;
+  padding: 5px 0; }
+.barrow .label { font-family: var(--sans); font-size: 12.5px; color: var(--ink); text-align: right;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barrow .track { height: 12px; background: rgba(0,0,0,0.05); border-radius: 2px; overflow: hidden; }
+.barrow .fill { height: 100%; border-radius: 2px; min-width: 3px; }
+.barrow .num { font-family: var(--serif); font-weight: 700; font-size: 15px; text-align: left; }
+
+/* ---- Subscribe band (bold, dark, unmissable) ---- */
+.subscribe-band { display: grid; grid-template-columns: 1.3fr 1fr; gap: 30px; align-items: center;
+  background: #3f1212; color: #f3e9e0; padding: 34px 40px; margin: 30px 0;
+  box-shadow: 0 1px 0 rgba(0,0,0,.15); }
+@media (max-width: 760px){ .subscribe-band { grid-template-columns: 1fr; padding: 28px 24px; gap: 20px; } }
+.subscribe-band .sb-kicker { font-family: var(--sans); font-size: 11px; letter-spacing: 2.5px;
+  text-transform: uppercase; color: #d9a679; font-weight: 700; }
+.subscribe-band h2 { font-family: var(--serif); font-weight: 700; font-size: clamp(23px, 3vw, 31px);
+  line-height: 1.12; margin: 10px 0 8px; color: #fbf5ef; }
+.subscribe-band p { font-family: var(--serif); font-size: 15px; line-height: 1.45; margin: 0; color: #e4cfc2; }
+.subscribe-band .sb-note { font-family: var(--sans); font-size: 11px; color: #c19b86; margin-top: 12px; letter-spacing: .3px; }
+
+.subscribe-dark { display: flex; gap: 10px; flex-wrap: wrap; }
+.subscribe-dark input { flex: 1; min-width: 170px; font-family: var(--serif); font-size: 16px;
+  padding: 13px 15px; background: rgba(255,255,255,.06); color: #fbf5ef;
+  border: 1px solid rgba(243,233,224,.4); border-radius: 0; }
+.subscribe-dark input::placeholder { color: #c7a996; }
+.subscribe-dark input:focus { outline: none; border-color: #f3e9e0; background: rgba(255,255,255,.1); }
+.subscribe-dark button { font-family: var(--sans); font-weight: 700; font-size: 13px; letter-spacing: 1px;
+  background: #f3e9e0; color: #3f1212; border: none; padding: 13px 26px; cursor: pointer; }
+.subscribe-dark button:hover { background: #fff; }
+.subscribe-dark button:disabled { opacity: .6; cursor: default; }
+.subscribe-done { font-family: var(--sans); font-size: 14px; color: #f3e9e0; }
+
+/* ---- NEW badge ---- */
+.badge-new { display: inline-block; font-family: var(--sans); font-size: 9px; font-weight: 800;
+  letter-spacing: 1px; color: #fff; background: var(--accent); padding: 1px 6px; border-radius: 2px;
+  vertical-align: middle; margin-left: 8px; }
+
+/* section header accent colour is set inline per desk */
+.section-head.k { border-bottom-color: currentColor; }
+.section-head.k > span:first-child { color: inherit; }

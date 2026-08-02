@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  getCounts,
+  getCategoryCounts,
   getDeskEntities,
   getDeskPublications,
   getRecentChanges,
@@ -8,10 +8,14 @@ import {
   type Entity,
   type Publication,
 } from "@/lib/queries";
-import { fmtDate, deskLabel, sezStatusColors } from "@/lib/format";
+import { fmtDate, deskLabel, deskColor, categoryMeta, FAMILY_LEGEND, isRecent } from "@/lib/format";
 import Subscribe from "@/components/Subscribe";
 
 export const dynamic = "force-dynamic";
+
+function NewBadge({ date }: { date?: string | null }) {
+  return isRecent(date, 7) ? <span className="badge-new">New</span> : null;
+}
 
 function EntityStory({ e }: { e: Entity }) {
   return (
@@ -20,6 +24,7 @@ function EntityStory({ e }: { e: Entity }) {
         <Link className="title" href={`/entity/${e.id}`}>
           {e.name}
         </Link>
+        <NewBadge date={e.date_of_registration} />
       </h3>
       <div className="meta">
         {[e.subcategory, e.registration_number, fmtDate(e.date_of_registration)]
@@ -41,22 +46,30 @@ function PubStory({ p }: { p: Publication }) {
         ) : (
           p.title
         )}
+        <NewBadge date={p.publish_date} />
       </h3>
       <div className="meta">{fmtDate(p.publish_date)}</div>
     </div>
   );
 }
 
+function SectionHead({ desk, slug }: { desk: string; slug: string }) {
+  const color = deskColor(desk);
+  return (
+    <div className="section-head k" style={{ color }}>
+      <span>{deskLabel(desk)}</span>
+      <Link className="count" href={`/desk/${slug}`} style={{ textDecoration: "none", color: "var(--muted)" }}>
+        View all →
+      </Link>
+    </div>
+  );
+}
+
 async function SezColumn() {
-  const meetings = await getSezMeetings(6);
+  const meetings = await getSezMeetings(5);
   return (
     <section>
-      <div className="section-head">
-        <span>SEZ / UAC Approvals</span>
-        <Link className="count" href="/desk/sez" style={{ textDecoration: "none" }}>
-          View all →
-        </Link>
-      </div>
+      <SectionHead desk="SEZ Approvals" slug="sez" />
       {meetings.length === 0 ? (
         <p className="empty">No meetings yet.</p>
       ) : (
@@ -65,7 +78,6 @@ async function SezColumn() {
             m.status === "Minutes Out"
               ? m.minutes_url || m.agenda_url || m.notice_url
               : m.agenda_url || m.notice_url || m.minutes_url;
-          const sc = sezStatusColors(m.status);
           return (
             <div className="story" key={m.id}>
               <h3>
@@ -77,26 +89,7 @@ async function SezColumn() {
                   m.title
                 )}
               </h3>
-              <div className="meta">
-                <span
-                  style={{
-                    display: "inline-block",
-                    fontFamily: "var(--sans)",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: 0.5,
-                    textTransform: "uppercase",
-                    color: sc.color,
-                    background: sc.bg,
-                    padding: "1px 7px",
-                    borderRadius: 999,
-                    marginRight: 6,
-                  }}
-                >
-                  {m.status || "—"}
-                </span>
-                {fmtDate(m.meeting_date)}
-              </div>
+              <div className="meta">{[m.status, fmtDate(m.meeting_date)].filter(Boolean).join(" · ")}</div>
             </div>
           );
         })
@@ -105,24 +98,11 @@ async function SezColumn() {
   );
 }
 
-async function DeskColumn({
-  desk,
-  kind,
-}: {
-  desk: string;
-  kind: "entity" | "pub";
-}) {
-  const items =
-    kind === "entity" ? await getDeskEntities(desk, 6) : await getDeskPublications(desk, 6);
-  const slug = desk.toLowerCase();
+async function DeskColumn({ desk, slug, kind }: { desk: string; slug: string; kind: "entity" | "pub" }) {
+  const items = kind === "entity" ? await getDeskEntities(desk, 6) : await getDeskPublications(desk, 6);
   return (
     <section>
-      <div className="section-head">
-        <span>{deskLabel(desk)}</span>
-        <Link className="count" href={`/desk/${slug}`} style={{ textDecoration: "none" }}>
-          View all →
-        </Link>
-      </div>
+      <SectionHead desk={desk} slug={slug} />
       {items.length === 0 ? (
         <p className="empty">No entries yet.</p>
       ) : kind === "entity" ? (
@@ -135,7 +115,10 @@ async function DeskColumn({
 }
 
 export default async function FrontPage() {
-  const [{ counts, total }, changes] = await Promise.all([getCounts(), getRecentChanges(12)]);
+  const [{ items: cats, total }, changes] = await Promise.all([
+    getCategoryCounts(),
+    getRecentChanges(14),
+  ]);
 
   if (total === 0) {
     return (
@@ -143,62 +126,81 @@ export default async function FrontPage() {
         <p className="pill">Awaiting first edition</p>
         <h2 style={{ fontSize: 28, marginTop: 12 }}>The presses are warming up.</h2>
         <p style={{ maxWidth: 560, color: "var(--ink-soft)" }}>
-          The GIFT Times has been set up but the first data ingestion hasn’t run yet. Once the
-          backfill completes, this page fills with every entity, circular and notice from GIFT IFSC.
+          The first data ingestion hasn’t run yet. Once the backfill completes, this page fills with
+          every entity, circular and notice from GIFT IFSC.
         </p>
       </div>
     );
   }
 
-  const numberCells: [string, number][] = [
-    ["Total Entities", total],
-    ["Brokers", counts["Brokers"] || 0],
-    ["Fund Mgrs", counts["FMEs"] || 0],
-    ["Insurance", counts["Insurance"] || 0],
-    ["Fintech", counts["Fintech"] || 0],
-    ["Banking", counts["Banking"] || 0],
-  ];
+  const max = cats[0]?.count || 1;
 
   return (
     <>
-      <div className="numbers">
-        {numberCells.map(([l, n]) => (
-          <div className="cell" key={l}>
-            <div className="n">{n.toLocaleString("en-IN")}</div>
-            <div className="l">{l}</div>
+      {/* Directory at a glance — honest breakdown that sums to the total */}
+      <section className="statband">
+        <div className="stat-head">
+          <div className="stat-total">
+            <span className="n">{total.toLocaleString("en-IN")}</span>
+            <span className="l">regulated entities across GIFT IFSC</span>
           </div>
-        ))}
-      </div>
+          <div className="legend">
+            {FAMILY_LEGEND.map((f) => (
+              <span className="legend-item" key={f.label}>
+                <span className="legend-dot" style={{ background: f.color }} />
+                {f.label}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="barlist">
+          {cats.map((c) => {
+            const m = categoryMeta(c.category);
+            return (
+              <div className="barrow" key={c.category}>
+                <span className="label" title={m.label}>
+                  {m.label}
+                </span>
+                <span className="track">
+                  <span className="fill" style={{ width: `${(c.count / max) * 100}%`, background: m.color }} />
+                </span>
+                <span className="num">{c.count.toLocaleString("en-IN")}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Subscribe — bold, unmissable */}
+      <section className="subscribe-band">
+        <div>
+          <div className="sb-kicker">The GIFT Times · Free newsletter</div>
+          <h2>Every new licence, circular and approval in GIFT IFSC.</h2>
+          <p>One email at 6am and 4pm, sorted by desk. Brokers, funds, tenders, UAC approvals and notices, the moment they’re published.</p>
+          <div className="sb-note">No spam. Unsubscribe anytime.</div>
+        </div>
+        <div>
+          <Subscribe variant="dark" />
+        </div>
+      </section>
 
       <div className="frontgrid">
         <div>
           <div className="desk-cols">
-            <DeskColumn desk="Brokers" kind="entity" />
-            <DeskColumn desk="FMEs" kind="entity" />
-            <DeskColumn desk="Circulars" kind="pub" />
-            <DeskColumn desk="Regulations" kind="pub" />
-            <DeskColumn desk="News" kind="pub" />
-            <DeskColumn desk="Tenders" kind="pub" />
-            <DeskColumn desk="Consultations" kind="pub" />
-            <DeskColumn desk="Insurance" kind="entity" />
-            <DeskColumn desk="Fintech" kind="entity" />
-            <DeskColumn desk="Reports" kind="pub" />
-            <DeskColumn desk="Speeches" kind="pub" />
+            <DeskColumn desk="Brokers" slug="brokers" kind="entity" />
+            <DeskColumn desk="FMEs" slug="fmes" kind="entity" />
+            <DeskColumn desk="Circulars" slug="circulars" kind="pub" />
+            <DeskColumn desk="Regulations" slug="regulations" kind="pub" />
+            <DeskColumn desk="News" slug="news" kind="pub" />
+            <DeskColumn desk="Tenders" slug="tenders" kind="pub" />
             <SezColumn />
+            <DeskColumn desk="Reports" slug="reports" kind="pub" />
+            <DeskColumn desk="Insurance" slug="insurance" kind="entity" />
+            <DeskColumn desk="Fintech" slug="fintech" kind="entity" />
           </div>
         </div>
 
         <aside>
-          <div className="box">
-            <div className="section-head">
-              <span>The 6am Edition</span>
-            </div>
-            <p style={{ fontSize: 14, color: "var(--ink-soft)", marginTop: 0 }}>
-              Every morning, one email: new licences, circulars and notices from GIFT IFSC — by desk.
-            </p>
-            <Subscribe />
-          </div>
-
           <div className="section-head">
             <span>Latest Movements</span>
           </div>
@@ -220,7 +222,7 @@ export default async function FrontPage() {
                     c.headline
                   )}
                 </h3>
-                <div className="meta">
+                <div className="meta" style={{ color: deskColor(c.desk) }}>
                   {[deskLabel(c.desk), fmtDate(c.occurred_on)].filter(Boolean).join(" · ")}
                 </div>
               </div>

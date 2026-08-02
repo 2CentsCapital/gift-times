@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 
-export default function Subscribe() {
+export default function Subscribe({ variant = "light" }: { variant?: "light" | "dark" }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [msg, setMsg] = useState("");
+  const dark = variant === "dark";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,17 +20,22 @@ export default function Subscribe() {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Something went wrong");
       setState("done");
-      setMsg("You’re on the list. The 6am edition will land in your inbox.");
+      setMsg("You’re on the list. Next edition lands at 6am.");
     } catch (err: any) {
       setState("error");
       setMsg(err.message);
     }
   }
 
-  if (state === "done") return <p style={{ fontFamily: "var(--sans)", fontSize: 13 }}>{msg}</p>;
+  if (state === "done")
+    return (
+      <p className={dark ? "subscribe-done" : ""} style={dark ? undefined : { fontFamily: "var(--sans)", fontSize: 13 }}>
+        ✓ {msg}
+      </p>
+    );
 
   return (
-    <form className="searchbar" onSubmit={submit} style={{ flexWrap: "wrap" }}>
+    <form className={dark ? "subscribe-dark" : "searchbar"} onSubmit={submit} style={{ flexWrap: "wrap" }}>
       <input
         type="email"
         required
@@ -39,10 +45,12 @@ export default function Subscribe() {
         aria-label="Email address"
       />
       <button type="submit" disabled={state === "loading"}>
-        {state === "loading" ? "…" : "Subscribe"}
+        {state === "loading" ? "…" : "Subscribe free"}
       </button>
       {state === "error" && (
-        <p style={{ fontFamily: "var(--sans)", fontSize: 12, color: "var(--accent)", width: "100%" }}>{msg}</p>
+        <p style={{ fontFamily: "var(--sans)", fontSize: 12, color: dark ? "#f3c9c0" : "var(--accent)", width: "100%" }}>
+          {msg}
+        </p>
       )}
     </form>
   );
