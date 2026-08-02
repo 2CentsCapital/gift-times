@@ -1,4 +1,4 @@
-// The GIFT Times — ingestion engine.
+// The GIFT City Times — ingestion engine.
 //
 //   - Full backfill on first run (fetches detail for every entity).
 //   - Daily diff afterwards: only new entities get a detail fetch.

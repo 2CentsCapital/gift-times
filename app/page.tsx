@@ -162,7 +162,7 @@ export default async function FrontPage() {
       {/* Subscribe — bold, unmissable */}
       <section className="subscribe-band">
         <div>
-          <div className="sb-kicker">The GIFT Times · Free newsletter</div>
+          <div className="sb-kicker">The GIFT City Times · Free newsletter</div>
           <h2>Every new licence, circular and approval in GIFT IFSC.</h2>
           <p>One email at 6am and 4pm, sorted by desk. The moment it’s published.</p>
           <div className="sb-note">No spam. Unsubscribe anytime.</div>

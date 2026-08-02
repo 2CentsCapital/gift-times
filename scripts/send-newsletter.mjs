@@ -4,7 +4,7 @@
 // editions per day never duplicate items and never miss any.
 //
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY,
-//      FROM_EMAIL (e.g. "The GIFT Times <onboarding@resend.dev>"),
+//      FROM_EMAIL (e.g. "The GIFT City Times <onboarding@resend.dev>"),
 //      OWNER_EMAIL, SITE_URL, [SEND_EMPTY=false]
 // Run: node scripts/send-newsletter.mjs [--force]
 //   --force ignores the watermark and sends everything from the last 24h.
@@ -14,7 +14,7 @@ import { buildNewsletter } from "./lib/newsletter.mjs";
 
 const FORCE = process.argv.includes("--force");
 const SITE_URL = (process.env.SITE_URL || "https://gift-times.vercel.app").replace(/\/$/, "");
-const FROM = process.env.FROM_EMAIL || "The GIFT Times <onboarding@resend.dev>";
+const FROM = process.env.FROM_EMAIL || "The GIFT City Times <onboarding@resend.dev>";
 const SEND_EMPTY = (process.env.SEND_EMPTY || "false").toLowerCase() === "true";
 
 // Timestamp of the previous send = our watermark. Changes created after this

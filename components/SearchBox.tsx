@@ -20,7 +20,7 @@ export default function SearchBox({ defaultValue = "" }: { defaultValue?: string
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search any broker, fund, entity or person…"
-        aria-label="Search The GIFT Times"
+        aria-label="Search The GIFT City Times"
       />
       <button type="submit">Search</button>
     </form>
