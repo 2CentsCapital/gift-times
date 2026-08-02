@@ -4,9 +4,9 @@ import {
   getDeskEntities,
   getDeskPublications,
   getRecentChanges,
-  getSezMeetings,
   type Entity,
   type Publication,
+  type Change,
 } from "@/lib/queries";
 import { fmtDate, deskLabel, deskColor, categoryMeta, FAMILY_LEGEND, isRecent } from "@/lib/format";
 import Subscribe from "@/components/Subscribe";
@@ -17,108 +17,96 @@ function NewBadge({ date }: { date?: string | null }) {
   return isRecent(date, 7) ? <span className="badge-new">New</span> : null;
 }
 
-function EntityStory({ e }: { e: Entity }) {
-  return (
-    <div className="story">
-      <h3>
-        <Link className="title" href={`/entity/${e.id}`}>
-          {e.name}
-        </Link>
-        <NewBadge date={e.date_of_registration} />
-      </h3>
-      <div className="meta">
-        {[e.subcategory, e.registration_number, fmtDate(e.date_of_registration)]
-          .filter(Boolean)
-          .join(" · ")}
-      </div>
-    </div>
+// One clean, scannable row: coloured desk tag · headline · date.
+function LatestRow({ c }: { c: Change }) {
+  const href = c.url || undefined;
+  const inner = (
+    <>
+      <span className="tag" style={{ background: deskColor(c.desk) }}>
+        {deskLabel(c.desk)}
+      </span>
+      <span className="hl">{c.headline}</span>
+      <span className="dt">{fmtDate(c.occurred_on)}</span>
+    </>
   );
-}
-
-function PubStory({ p }: { p: Publication }) {
-  return (
-    <div className="story">
-      <h3>
-        {p.file_url ? (
-          <a className="title" href={p.file_url} target="_blank" rel="noopener noreferrer">
-            {p.title}
-          </a>
-        ) : (
-          p.title
-        )}
-        <NewBadge date={p.publish_date} />
-      </h3>
-      <div className="meta">{fmtDate(p.publish_date)}</div>
-    </div>
-  );
-}
-
-function SectionHead({ desk, slug }: { desk: string; slug: string }) {
-  const color = deskColor(desk);
-  return (
-    <div className="section-head k" style={{ color }}>
-      <span>{deskLabel(desk)}</span>
-      <Link className="count" href={`/desk/${slug}`} style={{ textDecoration: "none", color: "var(--muted)" }}>
-        View all →
+  if (href && href.startsWith("http"))
+    return (
+      <a className="latest-row" href={href} target="_blank" rel="noopener noreferrer">
+        {inner}
+      </a>
+    );
+  if (href)
+    return (
+      <Link className="latest-row" href={href}>
+        {inner}
       </Link>
+    );
+  return <div className="latest-row">{inner}</div>;
+}
+
+function MiniDesk({
+  title,
+  slug,
+  color,
+  entities,
+  pubs,
+}: {
+  title: string;
+  slug: string;
+  color: string;
+  entities?: Entity[];
+  pubs?: Publication[];
+}) {
+  return (
+    <div className="mini">
+      <div className="section-head k" style={{ color }}>
+        <span>{title}</span>
+        <Link className="count" href={`/desk/${slug}`} style={{ textDecoration: "none", color: "var(--muted)" }}>
+          All →
+        </Link>
+      </div>
+      {entities?.map((e) => (
+        <div className="story" key={e.id}>
+          <h3 className="clamp2">
+            <Link className="title" href={`/entity/${e.id}`}>
+              {e.name}
+            </Link>
+            <NewBadge date={e.date_of_registration} />
+          </h3>
+          <div className="meta">{[e.subcategory, fmtDate(e.date_of_registration)].filter(Boolean).join(" · ")}</div>
+        </div>
+      ))}
+      {pubs?.map((p) => (
+        <div className="story" key={p.id}>
+          <h3 className="clamp2">
+            {p.file_url ? (
+              <a className="title" href={p.file_url} target="_blank" rel="noopener noreferrer">
+                {p.title}
+              </a>
+            ) : (
+              p.title
+            )}
+            <NewBadge date={p.publish_date} />
+          </h3>
+          <div className="meta">{fmtDate(p.publish_date)}</div>
+        </div>
+      ))}
     </div>
-  );
-}
-
-async function SezColumn() {
-  const meetings = await getSezMeetings(5);
-  return (
-    <section>
-      <SectionHead desk="SEZ Approvals" slug="sez" />
-      {meetings.length === 0 ? (
-        <p className="empty">No meetings yet.</p>
-      ) : (
-        meetings.map((m) => {
-          const link =
-            m.status === "Minutes Out"
-              ? m.minutes_url || m.agenda_url || m.notice_url
-              : m.agenda_url || m.notice_url || m.minutes_url;
-          return (
-            <div className="story" key={m.id}>
-              <h3>
-                {link ? (
-                  <a className="title" href={link} target="_blank" rel="noopener noreferrer">
-                    {m.title}
-                  </a>
-                ) : (
-                  m.title
-                )}
-              </h3>
-              <div className="meta">{[m.status, fmtDate(m.meeting_date)].filter(Boolean).join(" · ")}</div>
-            </div>
-          );
-        })
-      )}
-    </section>
-  );
-}
-
-async function DeskColumn({ desk, slug, kind }: { desk: string; slug: string; kind: "entity" | "pub" }) {
-  const items = kind === "entity" ? await getDeskEntities(desk, 6) : await getDeskPublications(desk, 6);
-  return (
-    <section>
-      <SectionHead desk={desk} slug={slug} />
-      {items.length === 0 ? (
-        <p className="empty">No entries yet.</p>
-      ) : kind === "entity" ? (
-        (items as Entity[]).map((e) => <EntityStory key={e.id} e={e} />)
-      ) : (
-        (items as Publication[]).map((p) => <PubStory key={p.id} p={p} />)
-      )}
-    </section>
   );
 }
 
 export default async function FrontPage() {
-  const [{ items: cats, total }, changes] = await Promise.all([
-    getCategoryCounts(),
-    getRecentChanges(14),
-  ]);
+  const [{ items: cats, total }, changes, brokers, fmes, circulars, regulations, tenders, reports] =
+    await Promise.all([
+      getCategoryCounts(),
+      getRecentChanges(16),
+      getDeskEntities("Brokers", 3),
+      getDeskEntities("FMEs", 3),
+      getDeskPublications("Circulars", 3),
+      getDeskPublications("Regulations", 3),
+      getDeskPublications("Tenders", 3),
+      getDeskPublications("Reports", 3),
+    ]);
 
   if (total === 0) {
     return (
@@ -126,8 +114,8 @@ export default async function FrontPage() {
         <p className="pill">Awaiting first edition</p>
         <h2 style={{ fontSize: 28, marginTop: 12 }}>The presses are warming up.</h2>
         <p style={{ maxWidth: 560, color: "var(--ink-soft)" }}>
-          The first data ingestion hasn’t run yet. Once the backfill completes, this page fills with
-          every entity, circular and notice from GIFT IFSC.
+          The first data ingestion hasn’t run yet. Once it does, this page fills with everything new
+          from GIFT IFSC.
         </p>
       </div>
     );
@@ -176,7 +164,7 @@ export default async function FrontPage() {
         <div>
           <div className="sb-kicker">The GIFT Times · Free newsletter</div>
           <h2>Every new licence, circular and approval in GIFT IFSC.</h2>
-          <p>One email at 6am and 4pm, sorted by desk. Brokers, funds, tenders, UAC approvals and notices, the moment they’re published.</p>
+          <p>One email at 6am and 4pm, sorted by desk. The moment it’s published.</p>
           <div className="sb-note">No spam. Unsubscribe anytime.</div>
         </div>
         <div>
@@ -184,52 +172,37 @@ export default async function FrontPage() {
         </div>
       </section>
 
-      <div className="frontgrid">
-        <div>
-          <div className="desk-cols">
-            <DeskColumn desk="Brokers" slug="brokers" kind="entity" />
-            <DeskColumn desk="FMEs" slug="fmes" kind="entity" />
-            <DeskColumn desk="Circulars" slug="circulars" kind="pub" />
-            <DeskColumn desk="Regulations" slug="regulations" kind="pub" />
-            <DeskColumn desk="News" slug="news" kind="pub" />
-            <DeskColumn desk="Tenders" slug="tenders" kind="pub" />
-            <SezColumn />
-            <DeskColumn desk="Reports" slug="reports" kind="pub" />
-            <DeskColumn desk="Insurance" slug="insurance" kind="entity" />
-            <DeskColumn desk="Fintech" slug="fintech" kind="entity" />
-          </div>
+      {/* The Latest — the single, scannable "what's new" feed */}
+      <section className="latest">
+        <div className="section-head">
+          <span>The Latest</span>
+          <span className="count">across every desk</span>
         </div>
-
-        <aside>
-          <div className="section-head">
-            <span>Latest Movements</span>
+        {changes.length === 0 ? (
+          <p className="empty">Quiet on the wire. New activity shows here the moment IFSCA posts it.</p>
+        ) : (
+          <div className="latest-feed">
+            {changes.map((c) => (
+              <LatestRow key={c.id} c={c} />
+            ))}
           </div>
-          {changes.length === 0 ? (
-            <p className="empty">Quiet on the wire. New activity appears here as it happens.</p>
-          ) : (
-            changes.map((c) => (
-              <div className="story" key={c.id}>
-                <h3 style={{ fontSize: 15 }}>
-                  {c.url && c.url.startsWith("http") ? (
-                    <a className="title" href={c.url} target="_blank" rel="noopener noreferrer">
-                      {c.headline}
-                    </a>
-                  ) : c.url ? (
-                    <Link className="title" href={c.url}>
-                      {c.headline}
-                    </Link>
-                  ) : (
-                    c.headline
-                  )}
-                </h3>
-                <div className="meta" style={{ color: deskColor(c.desk) }}>
-                  {[deskLabel(c.desk), fmtDate(c.occurred_on)].filter(Boolean).join(" · ")}
-                </div>
-              </div>
-            ))
-          )}
-        </aside>
-      </div>
+        )}
+      </section>
+
+      {/* Browse by desk — calm, clamped, breathing room */}
+      <section className="browse">
+        <div className="section-head">
+          <span>Browse by Desk</span>
+        </div>
+        <div className="calm-grid">
+          <MiniDesk title="New Brokers" slug="brokers" color={deskColor("Brokers")} entities={brokers} />
+          <MiniDesk title="New Fund Managers" slug="fmes" color={deskColor("FMEs")} entities={fmes} />
+          <MiniDesk title="Circulars" slug="circulars" color={deskColor("Circulars")} pubs={circulars} />
+          <MiniDesk title="Regulations" slug="regulations" color={deskColor("Regulations")} pubs={regulations} />
+          <MiniDesk title="Tenders" slug="tenders" color={deskColor("Tenders")} pubs={tenders} />
+          <MiniDesk title="Reports & Studies" slug="reports" color={deskColor("Reports")} pubs={reports} />
+        </div>
+      </section>
     </>
   );
 }
