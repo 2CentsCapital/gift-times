@@ -45,3 +45,9 @@ jobs:
         # Sends on the scheduled run, or on manual runs only if requested.
         if: github.event_name == 'schedule' || inputs.send_newsletter
         run: node scripts/send-newsletter.mjs
+
+      - name: Daily subscriber report (owner only, morning run)
+        # Once a day (06:00 IST run) + on manual dispatch. Emails the owner only
+        # on days with new sign-ups (set ALERT_ALWAYS=true to send daily).
+        if: github.event.schedule == '30 0 * * *' || github.event_name == 'workflow_dispatch'
+        run: node scripts/subscriber-alert.mjs
