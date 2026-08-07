@@ -1,6 +1,6 @@
 // IFSCA data-access layer.
 // The ifsca.gov.in listings are backed by internal DataTables JSON APIs.
-// This module wraps every feed we ingest for The GIFT City Times.
+// This module wraps every feed we ingest for GIFT City Times.
 //
 // Node 22+ (global fetch). No external deps.
 

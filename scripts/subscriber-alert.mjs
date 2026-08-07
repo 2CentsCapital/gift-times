@@ -9,7 +9,7 @@
 
 import { supa } from "./lib/supabase.mjs";
 
-const FROM = process.env.FROM_EMAIL || "The GIFT City Times <updates@giftcitytimes.com>";
+const FROM = process.env.FROM_EMAIL || "GIFT City Times <updates@giftcitytimes.com>";
 const OWNER = (process.env.OWNER_EMAIL || "").trim();
 const SITE_URL = (process.env.SITE_URL || "https://giftcitytimes.com").replace(/\/$/, "");
 const ALWAYS = (process.env.ALERT_ALWAYS || "false").toLowerCase() === "true";
@@ -54,8 +54,8 @@ async function main() {
 
   const subject =
     newList.length > 0
-      ? `The GIFT City Times · +${newList.length} subscriber${newList.length > 1 ? "s" : ""} (now ${total})`
-      : `The GIFT City Times · ${total} subscribers`;
+      ? `GIFT City Times · +${newList.length} subscriber${newList.length > 1 ? "s" : ""} (now ${total})`
+      : `GIFT City Times · ${total} subscribers`;
 
   const rows = newList
     .map(

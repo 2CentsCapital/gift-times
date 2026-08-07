@@ -5,7 +5,7 @@ import { DESKS, longDate } from "@/lib/format";
 import SearchBox from "@/components/SearchBox";
 
 export const metadata: Metadata = {
-  title: "The GIFT City Times — Daily intelligence on GIFT IFSC",
+  title: "GIFT City Times — Daily intelligence on GIFT IFSC",
   description:
     "A daily newspaper on GIFT IFSC: new brokers, fund managers, insurers, circulars, regulations and news — sourced from IFSCA public disclosures.",
 };
@@ -16,7 +16,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="container masthead">
           <div className="kicker">GIFT City · Gandhinagar · International Financial Services Centre</div>
-          <h1>The GIFT City Times</h1>
+          <h1>GIFT City Times</h1>
+          <div className="byline">
+            by{" "}
+            <a href="https://valura.ai" target="_blank" rel="noopener noreferrer">
+              valura.ai
+            </a>
+          </div>
           <div className="dateline">
             <span>{longDate()}</span>
             <span>·</span>
@@ -39,7 +45,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="container">{children}</main>
         <footer className="footer">
           <div>
-            <strong>The GIFT City Times</strong> · An automated chronicle of GIFT IFSC
+            <strong>GIFT City Times</strong> · An automated chronicle of GIFT IFSC · by{" "}
+            <a href="https://valura.ai" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+              valura.ai
+            </a>
           </div>
           <div>
             Data sourced from the International Financial Services Centres Authority (IFSCA) public
