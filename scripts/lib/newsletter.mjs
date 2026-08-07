@@ -55,6 +55,10 @@ function fmtDate(iso) {
 
 function itemLink(change, siteUrl) {
   const u = change.url || "";
+  // Route IFSCA document links through our mirror so they survive IFSCA outages.
+  if (/^https:\/\/ifsca\.gov\.in\/.*ViewFile/i.test(u)) {
+    return `${siteUrl}/d?u=${encodeURIComponent(u)}`;
+  }
   return u.startsWith("http") ? u : `${siteUrl}${u || "/"}`;
 }
 

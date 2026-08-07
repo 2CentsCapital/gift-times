@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DESK_BY_SLUG, deskLabel, fmtDate, sezStatusColors } from "@/lib/format";
+import { docHref } from "@/lib/doc";
 import {
   getEntitiesByDesk,
   getDeskPublications,
@@ -94,7 +95,7 @@ export default async function DeskPage({ params }: { params: { desk: string } })
                   {docLinks(m).map(([label, url]) => (
                     <span key={label}>
                       {" · "}
-                      <a className="readmore" href={url!} target="_blank" rel="noopener noreferrer">
+                      <a className="readmore" href={docHref(url)} target="_blank" rel="noopener noreferrer">
                         {label}
                       </a>
                     </span>
@@ -131,11 +132,13 @@ export default async function DeskPage({ params }: { params: { desk: string } })
       ) : pubs.length === 0 ? (
         <p className="empty">No publications recorded yet.</p>
       ) : (
-        pubs.map((p) => (
+        pubs.map((p) => {
+          const dh = docHref(p.file_url);
+          return (
           <div className="story" key={p.id}>
             <h3>
-              {p.file_url ? (
-                <a className="title" href={p.file_url} target="_blank" rel="noopener noreferrer">
+              {dh ? (
+                <a className="title" href={dh} target="_blank" rel="noopener noreferrer">
                   {p.title}
                 </a>
               ) : (
@@ -148,7 +151,8 @@ export default async function DeskPage({ params }: { params: { desk: string } })
                 .join(" · ")}
             </div>
           </div>
-        ))
+          );
+        })
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import {
   type Change,
 } from "@/lib/queries";
 import { fmtDate, deskLabel, deskColor, categoryMeta, FAMILY_LEGEND, isRecent } from "@/lib/format";
+import { docHref } from "@/lib/doc";
 import Subscribe from "@/components/Subscribe";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,8 @@ function NewBadge({ date }: { date?: string | null }) {
 
 // One clean, scannable row: coloured desk tag · headline · date.
 function LatestRow({ c }: { c: Change }) {
-  const href = c.url || undefined;
+  const href = docHref(c.url);
+  const external = !!href && (href.startsWith("http") || href.startsWith("/d?"));
   const inner = (
     <>
       <span className="tag" style={{ background: deskColor(c.desk) }}>
@@ -29,7 +31,7 @@ function LatestRow({ c }: { c: Change }) {
       <span className="dt">{fmtDate(c.occurred_on)}</span>
     </>
   );
-  if (href && href.startsWith("http"))
+  if (external)
     return (
       <a className="latest-row" href={href} target="_blank" rel="noopener noreferrer">
         {inner}
@@ -76,21 +78,24 @@ function MiniDesk({
           <div className="meta">{[e.subcategory, fmtDate(e.date_of_registration)].filter(Boolean).join(" · ")}</div>
         </div>
       ))}
-      {pubs?.map((p) => (
-        <div className="story" key={p.id}>
-          <h3 className="clamp2">
-            {p.file_url ? (
-              <a className="title" href={p.file_url} target="_blank" rel="noopener noreferrer">
-                {p.title}
-              </a>
-            ) : (
-              p.title
-            )}
-            <NewBadge date={p.publish_date} />
-          </h3>
-          <div className="meta">{fmtDate(p.publish_date)}</div>
-        </div>
-      ))}
+      {pubs?.map((p) => {
+        const dh = docHref(p.file_url);
+        return (
+          <div className="story" key={p.id}>
+            <h3 className="clamp2">
+              {dh ? (
+                <a className="title" href={dh} target="_blank" rel="noopener noreferrer">
+                  {p.title}
+                </a>
+              ) : (
+                p.title
+              )}
+              <NewBadge date={p.publish_date} />
+            </h3>
+            <div className="meta">{fmtDate(p.publish_date)}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }

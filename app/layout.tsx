@@ -16,12 +16,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="container masthead">
           <div className="kicker">GIFT City · Gandhinagar · International Financial Services Centre</div>
-          <h1>GIFT City Times</h1>
-          <div className="byline">
-            by{" "}
-            <a href="https://valura.ai" target="_blank" rel="noopener noreferrer">
-              valura.ai
-            </a>
+          <div className="nameplate">
+            <h1>GIFT City Times</h1>
+            <div className="byline">
+              by{" "}
+              <a href="https://valura.ai" target="_blank" rel="noopener noreferrer">
+                valura.ai
+              </a>
+            </div>
           </div>
           <div className="dateline">
             <span>{longDate()}</span>

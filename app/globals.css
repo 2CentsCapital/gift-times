@@ -37,10 +37,13 @@ a { color: inherit; }
   font-family: var(--serif); font-weight: 700; margin: 8px 0 6px;
   font-size: clamp(38px, 7vw, 76px); line-height: 0.95; letter-spacing: 1px;
 }
-.masthead .byline { font-family: var(--sans); font-size: 11px; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--muted); margin-top: 6px; }
-.masthead .byline a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.masthead .nameplate { display: inline-block; }
+.masthead .byline { font-family: var(--sans); font-size: 16px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin-top: -2px; text-align: right;
+  padding-right: 4px; }
+.masthead .byline a { color: var(--accent); text-decoration: none; font-weight: 700; }
 .masthead .byline a:hover { text-decoration: underline; }
+@media (max-width: 520px){ .masthead .byline { font-size: 13px; } }
 .masthead .dateline {
   font-family: var(--sans); font-size: 12px; letter-spacing: 2px;
   text-transform: uppercase; color: var(--ink-soft);
