@@ -9,13 +9,27 @@
 // Run: node scripts/send-newsletter.mjs [--force]
 //   --force ignores the watermark and sends everything from the last 24h.
 
+import crypto from "crypto";
 import { supa } from "./lib/supabase.mjs";
 import { buildNewsletter } from "./lib/newsletter.mjs";
 
 const FORCE = process.argv.includes("--force");
-const SITE_URL = (process.env.SITE_URL || "https://gift-times.vercel.app").replace(/\/$/, "");
+const SITE_URL = (process.env.SITE_URL || "https://giftcitytimes.com").replace(/\/$/, "");
 const FROM = process.env.FROM_EMAIL || "GIFT City Times <onboarding@resend.dev>";
 const SEND_EMPTY = (process.env.SEND_EMPTY || "false").toLowerCase() === "true";
+const OWNER = (process.env.OWNER_EMAIL || "").trim().toLowerCase();
+const UNSUB_SECRET = process.env.UNSUB_SECRET || "";
+
+// Same scheme as lib/token.ts (must match so links verify).
+function unsubUrl(email) {
+  if (!UNSUB_SECRET) return null;
+  const t = crypto
+    .createHmac("sha256", UNSUB_SECRET)
+    .update(`unsub:${email.trim().toLowerCase()}`)
+    .digest("base64url")
+    .slice(0, 24);
+  return `${SITE_URL}/api/unsubscribe?e=${encodeURIComponent(email)}&t=${t}`;
+}
 
 // Timestamp of the previous send = our watermark. Changes created after this
 // are what's "new" for this edition.
@@ -41,14 +55,22 @@ async function recipients() {
   return [...set];
 }
 
-async function sendEmail(to, subject, html) {
+async function sendEmail(to, subject, html, listUnsub) {
+  const body = { from: FROM, to, subject, html };
+  if (listUnsub) {
+    // RFC 8058 one-click unsubscribe — improves Gmail/Apple deliverability.
+    body.headers = {
+      "List-Unsubscribe": `<${listUnsub}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    };
+  }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
   return res.json();
@@ -92,19 +114,30 @@ async function main() {
     return;
   }
 
-  const { subject, html } = buildNewsletter(changes, SITE_URL, today);
-
-  // send individually so one bad address doesn't nuke the batch
+  // Build per recipient so each carries its own unsubscribe link. The owner
+  // (added via OWNER_EMAIL, not a subscriber) gets no unsubscribe link.
+  const { subject } = buildNewsletter(changes, SITE_URL, today, null);
   let sent = 0;
   for (const addr of to) {
     try {
-      await sendEmail(addr, subject, html);
+      const isOwner = addr.trim().toLowerCase() === OWNER;
+      const unsub = isOwner ? null : unsubUrl(addr);
+      const { html } = buildNewsletter(changes, SITE_URL, today, unsub);
+      await sendEmail(addr, subject, html, unsub);
       sent++;
     } catch (e) {
       console.error(`  ! send failed to ${addr}: ${e.message}`);
     }
   }
   console.log(`Sent "${subject}" (${changes.length} items) to ${sent}/${to.length} recipient(s).`);
+
+  // M-2: if every send failed (e.g. Resend outage), do NOT advance the
+  // watermark — otherwise these items are lost from all future editions.
+  // Leave it for the next run to retry, and fail loudly.
+  if (sent === 0) {
+    console.error("All sends failed — watermark NOT advanced; items will retry next run.");
+    process.exit(1);
+  }
 
   await supa.from("newsletter_sends").insert({
     send_date: today,

@@ -63,7 +63,8 @@ function itemLink(change, siteUrl) {
 }
 
 // changes: rows from `changes`. Returns { subject, html }.
-export function buildNewsletter(changes, siteUrl, editionDate) {
+// unsubscribeUrl (optional): per-recipient one-click unsubscribe link.
+export function buildNewsletter(changes, siteUrl, editionDate, unsubscribeUrl = null) {
   const byDesk = {};
   for (const c of changes) {
     const d = c.desk || "Other";
@@ -119,7 +120,11 @@ export function buildNewsletter(changes, siteUrl, editionDate) {
           <a href="${esc(siteUrl)}" style="display:inline-block;background:#1a1a1a;color:#fbf9f3;font:600 13px/1 Arial,sans-serif;letter-spacing:1px;text-decoration:none;padding:14px 28px;">READ TODAY’S EDITION →</a>
         </td></tr>
         <tr><td style="padding:16px 32px 28px;border-top:1px solid #e0d9c8;text-align:center;font:400 11px/1.5 Arial,sans-serif;color:#a89e88;">
-          GIFT City Times · Automated from IFSCA public disclosures · <a href="${esc(siteUrl)}" style="color:#7a1f1f;">${esc(siteUrl.replace(/^https?:\/\//, ""))}</a>
+          GIFT City Times · by <a href="https://valura.ai" style="color:#7a1f1f;">valura.ai</a> · Automated from IFSCA public disclosures${
+            unsubscribeUrl
+              ? ` · <a href="${esc(unsubscribeUrl)}" style="color:#a89e88;">Unsubscribe</a>`
+              : ""
+          }
         </td></tr>
       </table>
     </td></tr>

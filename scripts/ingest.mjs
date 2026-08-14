@@ -69,6 +69,31 @@ const ENTITY_HEADLINE = {
   Other: "New registered entity",
 };
 
+// M-4: categories we know how to classify/colour. Anything outside this set is
+// surfaced (console + run summary) so a new IFSCA category is never silently
+// mis-grouped (as happened with BATF).
+const KNOWN_ENTITY_CATEGORIES = new Set([
+  "Fund Management",
+  "Capital Market Intermediaries",
+  "Market Infrastructure Institutions",
+  "Metals & Commodities entities",
+  "Qualified Jewellers",
+  "BATF Service Providers",
+  "Banking",
+  "Finance Company",
+  "Payment Service Provider",
+  "Payment System Provider",
+  "IFSC Insurance Office (IIO)",
+  "IFSC Insurance Intermediary Office (IIIO)",
+  "Fintech Sandbox Entities",
+  "TAS Service Provider",
+  "Ancillary Service Provider",
+  "Global In-House Centres",
+  "Foreign Universities",
+  "KYC Registration Agency",
+  "Surrendered/Cancelled CoRs",
+]);
+
 function deskForPub(kind) {
   if (kind === "circular") return "Circulars";
   if (["regulation", "notification", "rules", "guidelines", "aml"].includes(kind))
@@ -178,13 +203,26 @@ async function insertEntity(listItem, detail, changes) {
 async function ingestEntities(isFull, changes) {
   const list = await ifsca.fetchEntityList();
   const existing = await loadExistingEntities();
-  const seen = new Set();
 
+  // H-1: never let a truncated/empty IFSCA response wipe the directory. If the
+  // fetched list is less than half of what we already know, treat it as an
+  // IFSCA outage/truncation and abort — no removals, no updates, no flood.
+  if (existing.size > 100 && list.length < existing.size * 0.5) {
+    throw new Error(
+      `Aborting ingest: IFSCA returned ${list.length} entities vs ${existing.size} known (>50% drop — likely an IFSCA outage or truncated response). No changes applied.`
+    );
+  }
+
+  const seen = new Set();
+  const unknownCategories = new Set(); // M-4
   const newItems = [];
   const movedToSurrendered = [];
 
   for (const item of list) {
     seen.add(item.encryptedId);
+    if (item.category && !KNOWN_ENTITY_CATEGORIES.has(item.category)) {
+      unknownCategories.add(item.category);
+    }
     const prev = existing.get(item.encryptedId);
     if (!prev) {
       newItems.push(item);
@@ -260,7 +298,64 @@ async function ingestEntities(isFull, changes) {
     removed++;
   }
 
-  return { total: list.length, added, removed, statusChanges: movedToSurrendered.length };
+  return {
+    total: list.length,
+    added,
+    removed,
+    statusChanges: movedToSurrendered.length,
+    unknownCategories: [...unknownCategories],
+  };
+}
+
+// M-1: entity detail (contact person, address, validity, reg no.) is captured
+// once at insert and otherwise never refreshed. Re-fetch a rolling batch of the
+// stalest records each run so the whole directory cycles within ~a week.
+async function refreshStaleDetails(limit = 150) {
+  const cutoff = new Date(Date.now() - 14 * 86400 * 1000).toISOString();
+  const { data: stale, error } = await supa
+    .from("entities")
+    .select("id, encrypted_id, category")
+    .eq("status", "Active")
+    .lt("detail_fetched_at", cutoff)
+    .order("detail_fetched_at", { ascending: true })
+    .limit(limit);
+  if (error || !stale?.length) return 0;
+
+  let refreshed = 0;
+  await mapPool(stale, 6, async (e) => {
+    try {
+      const d = await ifsca.fetchEntityDetail(e.encrypted_id);
+      if (!d.name) return; // bad/empty response — skip, don't overwrite
+      await supa
+        .from("entities")
+        .update({
+          registration_number: d.registrationNumber,
+          date_of_registration: d.dateOfRegistration,
+          validity_to: d.validityTo,
+          registered_address: d.registeredAddress,
+          contact_person: d.contactPerson,
+          email: d.email,
+          website: d.website,
+          remarks: d.remarks,
+          is_active: d.isActive,
+          ifsca_modified_on: d.modifiedOn,
+          detail_fetched_at: new Date().toISOString(),
+        })
+        .eq("id", e.id);
+      if (d.contactPerson) {
+        await supa
+          .from("people")
+          .upsert(
+            { entity_id: e.id, name: d.contactPerson, email: d.email, role: "Contact Person" },
+            { onConflict: "entity_id,name" }
+          );
+      }
+      refreshed++;
+    } catch {
+      /* transient — will be retried on a future run */
+    }
+  });
+  return refreshed;
 }
 
 async function ingestPublications(changes) {
@@ -480,14 +575,22 @@ async function main() {
     .single();
 
   const changes = [];
-  let entitySummary, pubSummary, sezSummary, ok = true, errMsg = null;
+  let entitySummary, pubSummary, sezSummary, refreshed = 0, ok = true, errMsg = null;
   try {
     entitySummary = await ingestEntities(isFull, changes);
     console.log(`Entities: +${entitySummary.added} added, ${entitySummary.removed} removed, ${entitySummary.statusChanges} status changes (of ${entitySummary.total})`);
+    if (entitySummary.unknownCategories?.length) {
+      console.warn(`⚠️  UNKNOWN CATEGORIES (need classification in lib/format.ts + ingest KNOWN set): ${entitySummary.unknownCategories.join(", ")}`);
+    }
     pubSummary = await ingestPublications(changes);
     console.log("Publications:", JSON.stringify(pubSummary));
     sezSummary = await ingestSezMeetings(changes);
     console.log("SEZ/UAC meetings:", JSON.stringify(sezSummary));
+    // M-1: refresh a rolling batch of stale entity details (daily runs only).
+    if (!isFull) {
+      refreshed = await refreshStaleDetails();
+      console.log(`Refreshed stale entity details: ${refreshed}`);
+    }
 
     // On the FULL backfill we do NOT flood the change log with ~2200 "new"
     // rows — that's the baseline, not news. Daily runs record everything.
@@ -514,7 +617,7 @@ async function main() {
     .update({
       finished_at: new Date().toISOString(),
       ok,
-      summary: { entitySummary, pubSummary, sezSummary, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
+      summary: { entitySummary, pubSummary, sezSummary, refreshed, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
     })
     .eq("id", run?.id);
 

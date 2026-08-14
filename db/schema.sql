@@ -121,6 +121,14 @@ create table if not exists newsletter_sends (
 -- once-per-day unique lock if a previous schema created it.
 alter table newsletter_sends drop constraint if exists newsletter_sends_send_date_key;
 
+-- Subscribe rate-limiting (per IP).
+create table if not exists signup_attempts (
+  id         uuid primary key default gen_random_uuid(),
+  ip         text,
+  created_at timestamptz default now()
+);
+create index if not exists signup_attempts_ip_time on signup_attempts (ip, created_at desc);
+
 -- ---------------------------------------------------------------------------
 -- Row Level Security: public read for the site's content; writes stay on the
 -- service_role key (which bypasses RLS). Subscribers are NOT publicly readable.
@@ -137,6 +145,7 @@ alter table changes      enable row level security;
 alter table subscribers      enable row level security;
 alter table ingest_runs      enable row level security;
 alter table newsletter_sends enable row level security;
+alter table signup_attempts  enable row level security;
 
 do $$
 begin

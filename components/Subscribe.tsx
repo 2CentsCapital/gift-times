@@ -20,7 +20,11 @@ export default function Subscribe({ variant = "light" }: { variant?: "light" | "
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "Something went wrong");
       setState("done");
-      setMsg("You’re on the list. Next edition lands at 6am.");
+      setMsg(
+        j.pending
+          ? "Almost there — check your inbox and click Confirm to finish."
+          : "You’re subscribed. The next edition lands in your inbox."
+      );
     } catch (err: any) {
       setState("error");
       setMsg(err.message);
