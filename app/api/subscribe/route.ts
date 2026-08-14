@@ -10,7 +10,12 @@ const RATE_MAX = 5; // attempts
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 function clientIp(req: Request): string {
-  return (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+  // x-real-ip is set by Vercel to the true client IP. The first x-forwarded-for
+  // entry is client-controllable (spoofable), so prefer x-real-ip for limiting.
+  return (
+    (req.headers.get("x-real-ip") || (req.headers.get("x-forwarded-for") || "").split(",")[0]).trim() ||
+    "unknown"
+  );
 }
 
 async function sendConfirmation(email: string) {
@@ -35,9 +40,19 @@ async function sendConfirmation(email: string) {
 }
 
 export async function POST(req: Request) {
+  let body: any;
   try {
-    const { email } = await req.json();
-    const clean = String(email || "").trim().toLowerCase();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+  try {
+    const email = body?.email;
+    // Require a string — reject arrays/objects/numbers (type-confusion).
+    if (typeof email !== "string") {
+      return NextResponse.json({ error: "Please enter a valid email." }, { status: 400 });
+    }
+    const clean = email.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean) || clean.length > 200) {
       return NextResponse.json({ error: "Please enter a valid email." }, { status: 400 });
     }

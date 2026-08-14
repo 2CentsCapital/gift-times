@@ -177,13 +177,17 @@ export const getEntity = cache(
 
 export async function searchAll(q: string) {
   const supa = getSupabase();
-  const { data, error } = await supa.rpc("search_all", { q });
+  // Cap length (DoS) — the term is parameterized to the RPC either way.
+  const term = (q || "").slice(0, 80);
+  const { data, error } = await supa.rpc("search_all", { q: term });
   if (error) {
-    // fallback: simple entity name search if the RPC isn't present
+    // Fallback (only if the RPC is missing). Strip PostgREST filter
+    // metacharacters so `q` can't inject extra .or() conditions.
+    const safe = term.replace(/[,()*"\\]/g, " ").trim();
     const { data: ents } = await supa
       .from("entities")
       .select("id,name,category,subcategory,desk,contact_person,date_of_registration")
-      .or(`name.ilike.%${q}%,contact_person.ilike.%${q}%`)
+      .or(`name.ilike.%${safe}%,contact_person.ilike.%${safe}%`)
       .limit(50);
     return (ents || []).map((e: any) => ({
       result_type: "entity",
