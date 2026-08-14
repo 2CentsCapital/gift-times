@@ -12,7 +12,7 @@ import { fmtDate, deskLabel, deskColor, categoryMeta, FAMILY_LEGEND, isRecent } 
 import { docHref } from "@/lib/doc";
 import Subscribe from "@/components/Subscribe";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 900; // ISR: refresh every 15 min (ingest is twice daily)
 
 function NewBadge({ date }: { date?: string | null }) {
   return isRecent(date, 7) ? <span className="badge-new">New</span> : null;
@@ -130,6 +130,10 @@ export default async function FrontPage() {
 
   return (
     <>
+      <h1 className="sr-only">
+        GIFT City Times — GIFT IFSC entity registry, circulars, tenders and daily updates
+      </h1>
+
       {/* Directory at a glance — honest breakdown that sums to the total */}
       <section className="statband">
         <div className="stat-head">
@@ -154,7 +158,7 @@ export default async function FrontPage() {
                 <span className="label" title={m.label}>
                   {m.label}
                 </span>
-                <span className="track">
+                <span className="track" aria-hidden="true">
                   <span className="fill" style={{ width: `${(c.count / max) * 100}%`, background: m.color }} />
                 </span>
                 <span className="num">{c.count.toLocaleString("en-IN")}</span>

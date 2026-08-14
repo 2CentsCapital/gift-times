@@ -64,9 +64,10 @@ export function toIsoDate(s) {
 
 // Lightweight list of every entity (name + category + the EncryptedId we
 // need to fetch full detail). ~2000 rows in one request.
+const ENTITY_LIST_CAP = 10000;
 export async function fetchEntityList() {
   const p = {
-    ...baseParams(5000),
+    ...baseParams(ENTITY_LIST_CAP),
     Id: "0",
     ParentTypeId: "0",
     EntityFilter: "",
@@ -75,6 +76,10 @@ export async function fetchEntityList() {
   };
   const d = await getJson("DirectoryList/DirectoryGetList", p);
   const rows = d.data || [];
+  // L-2: if we ever hit the cap the list is silently truncated — surface it.
+  if (rows.length >= ENTITY_LIST_CAP) {
+    console.warn(`⚠️  Entity list hit the ${ENTITY_LIST_CAP} cap — raise ENTITY_LIST_CAP / paginate.`);
+  }
   return rows
     .map((r) => ({
       encryptedId: r.EncryptedId || null,

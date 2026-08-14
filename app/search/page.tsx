@@ -1,9 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { searchAll } from "@/lib/queries";
 import { fmtDate } from "@/lib/format";
 import SearchBox from "@/components/SearchBox";
 
 export const dynamic = "force-dynamic";
+
+// Search-results URLs shouldn't be indexed (thin/duplicate); keep them crawl-follow.
+export const metadata: Metadata = {
+  title: "Search",
+  robots: { index: false, follow: true },
+};
 
 export default async function SearchPage({
   searchParams,

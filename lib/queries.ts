@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getSupabase } from "./supabase";
 
 export type Change = {
@@ -163,12 +164,16 @@ export async function getRecentChanges(limit = 12): Promise<Change[]> {
   return (data as Change[]) || [];
 }
 
-export async function getEntity(id: string): Promise<{ entity: Entity | null; people: any[] }> {
-  const supa = getSupabase();
-  const { data: entity } = await supa.from("entities").select("*").eq("id", id).maybeSingle();
-  const { data: people } = await supa.from("people").select("*").eq("entity_id", id);
-  return { entity: (entity as Entity) || null, people: people || [] };
-}
+// cache() dedupes the fetch between generateMetadata and the page render.
+export const getEntity = cache(
+  async (id: string): Promise<{ entity: Entity | null; people: any[] }> => {
+    const supa = getSupabase();
+    const { data: entity } = await supa.from("entities").select("*").eq("id", id).maybeSingle();
+    if (!entity) return { entity: null, people: [] };
+    const { data: people } = await supa.from("people").select("*").eq("entity_id", id);
+    return { entity: entity as Entity, people: people || [] };
+  }
+);
 
 export async function searchAll(q: string) {
   const supa = getSupabase();

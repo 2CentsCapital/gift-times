@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DESK_BY_SLUG, deskLabel, fmtDate, sezStatusColors } from "@/lib/format";
 import { docHref } from "@/lib/doc";
@@ -9,7 +10,23 @@ import {
   isEntityDesk,
 } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 900;
+
+const SITE = "https://giftcitytimes.com";
+
+export async function generateMetadata({ params }: { params: { desk: string } }): Promise<Metadata> {
+  const desk = DESK_BY_SLUG[params.desk];
+  if (!desk) return { title: "Not found", robots: { index: false } };
+  const label = deskLabel(desk);
+  const title = `${label} in GIFT IFSC`;
+  const description = `${BLURB[desk] || label + " in GIFT IFSC."} Tracked and updated twice daily on GIFT City Times.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/desk/${params.desk}` },
+    openGraph: { title, description, url: `${SITE}/desk/${params.desk}`, type: "website" },
+  };
+}
 
 const BLURB: Record<string, string> = {
   Brokers: "Capital-market intermediaries registered in GIFT IFSC.",
@@ -54,7 +71,7 @@ export default async function DeskPage({ params }: { params: { desk: string } })
   return (
     <div style={{ padding: "24px 0" }}>
       <div className="section-head">
-        <span>{deskLabel(desk)} Desk</span>
+        <h1>{deskLabel(desk)} Desk</h1>
         <span className="count">
           {(sezMode ? meetings.length : entityMode ? entities.length : pubs.length)} entries
         </span>

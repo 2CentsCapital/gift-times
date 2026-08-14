@@ -358,6 +358,25 @@ async function refreshStaleDetails(limit = 150) {
   return refreshed;
 }
 
+// L-1: keep an eye on the document mirror bucket vs the 1 GB free tier.
+async function storageUsage() {
+  let bytes = 0, files = 0;
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supa.storage.from("docs").list("", { limit: 1000, offset });
+    if (error || !data?.length) break;
+    for (const f of data) {
+      files++;
+      bytes += f.metadata?.size || 0;
+    }
+    if (data.length < 1000) break;
+  }
+  const mb = Math.round(bytes / 1e6);
+  if (mb > 800) {
+    console.warn(`⚠️  Document mirror at ${mb} MB / 1024 MB free tier (${files} files) — prune or upgrade soon.`);
+  }
+  return { files, mb };
+}
+
 async function ingestPublications(changes) {
   const feeds = await ifsca.fetchAllPublications();
   const summary = {};
@@ -575,7 +594,7 @@ async function main() {
     .single();
 
   const changes = [];
-  let entitySummary, pubSummary, sezSummary, refreshed = 0, ok = true, errMsg = null;
+  let entitySummary, pubSummary, sezSummary, refreshed = 0, storage = null, ok = true, errMsg = null;
   try {
     entitySummary = await ingestEntities(isFull, changes);
     console.log(`Entities: +${entitySummary.added} added, ${entitySummary.removed} removed, ${entitySummary.statusChanges} status changes (of ${entitySummary.total})`);
@@ -591,6 +610,8 @@ async function main() {
       refreshed = await refreshStaleDetails();
       console.log(`Refreshed stale entity details: ${refreshed}`);
     }
+    storage = await storageUsage();
+    console.log(`Document mirror: ${storage.files} files, ${storage.mb} MB.`);
 
     // On the FULL backfill we do NOT flood the change log with ~2200 "new"
     // rows — that's the baseline, not news. Daily runs record everything.
@@ -617,7 +638,7 @@ async function main() {
     .update({
       finished_at: new Date().toISOString(),
       ok,
-      summary: { entitySummary, pubSummary, sezSummary, refreshed, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
+      summary: { entitySummary, pubSummary, sezSummary, refreshed, storage, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
     })
     .eq("id", run?.id);
 

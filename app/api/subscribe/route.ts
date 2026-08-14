@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabaseFresh } from "@/lib/supabase";
 import { makeToken } from "@/lib/token";
 
 export const runtime = "nodejs";
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Please enter a valid email." }, { status: 400 });
     }
 
-    const supa = getSupabase();
+    const supa = getSupabaseFresh();
 
     // Rate limit per IP.
     const ip = clientIp(req);

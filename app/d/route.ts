@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabaseFresh } from "@/lib/supabase";
 
 // Document mirror: fetches an IFSCA-hosted PDF once, caches it in our own
 // storage, and serves our copy thereafter — so links survive IFSCA outages.
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Only IFSCA documents are proxied", { status: 400 });
   }
 
-  const supa = getSupabase();
+  const supa = getSupabaseFresh();
   const key = cacheKey(target, raw);
   const publicUrl = supa.storage.from(BUCKET).getPublicUrl(key).data.publicUrl;
 

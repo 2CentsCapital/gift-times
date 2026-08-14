@@ -33,10 +33,12 @@ a { color: inherit; }
   font-family: var(--sans); font-size: 11px; letter-spacing: 3px;
   text-transform: uppercase; color: var(--muted);
 }
-.masthead h1 {
+.masthead .wordmark {
+  display: block; text-decoration: none; color: var(--ink);
   font-family: var(--serif); font-weight: 700; margin: 8px 0 6px;
   font-size: clamp(38px, 7vw, 76px); line-height: 0.95; letter-spacing: 1px;
 }
+.masthead .wordmark:hover { color: var(--ink); }
 .masthead .nameplate { display: inline-block; }
 .masthead .byline { font-family: var(--sans); font-size: 16px; letter-spacing: 1px;
   text-transform: uppercase; color: var(--muted); margin-top: -2px; text-align: right;
@@ -66,6 +68,8 @@ a { color: inherit; }
   padding-bottom: 7px; margin: 0 0 14px; display: flex; justify-content: space-between; align-items: baseline;
 }
 .section-head .count { color: var(--muted); font-weight: 400; }
+.section-head h1, .section-head h2 { font: inherit; letter-spacing: inherit; text-transform: inherit;
+  color: inherit; margin: 0; display: inline; }
 
 /* ---- Front page grid ---- */
 .frontgrid { display: grid; grid-template-columns: 2fr 1fr; gap: 34px; padding: 26px 0; }
@@ -135,6 +139,8 @@ a { color: inherit; }
 .pill { display:inline-block; font-family:var(--sans); font-size:10px; letter-spacing:1px; text-transform:uppercase;
   color:var(--accent); border:1px solid var(--accent); padding:2px 8px; border-radius:999px; }
 .empty { color: var(--muted); font-style: italic; padding: 20px 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 /* ---- Directory stat band (honest breakdown, sums to total) ---- */
 .statband { padding: 26px 0 30px; border-bottom: 3px double var(--rule-strong); }

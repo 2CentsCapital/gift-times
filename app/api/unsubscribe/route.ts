@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabaseFresh } from "@/lib/supabase";
 import { verifyToken } from "@/lib/token";
 import { actionPage } from "@/lib/page-response";
 
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 async function unsubscribe(email: string, token: string): Promise<boolean> {
   if (!email || !verifyToken("unsub", email, token)) return false;
-  const supa = getSupabase();
+  const supa = getSupabaseFresh();
   const { error } = await supa
     .from("subscribers")
     .update({ unsubscribed_at: new Date().toISOString(), confirmed: false })

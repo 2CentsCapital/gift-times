@@ -1,4 +1,4 @@
-import { getSupabase } from "@/lib/supabase";
+import { getSupabaseFresh } from "@/lib/supabase";
 import { verifyToken } from "@/lib/token";
 import { actionPage } from "@/lib/page-response";
 
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     return actionPage("Invalid confirmation link", "This link is invalid or has expired. Please subscribe again.", 400);
   }
 
-  const supa = getSupabase();
+  const supa = getSupabaseFresh();
   const { error } = await supa
     .from("subscribers")
     .update({ confirmed: true, unsubscribed_at: null })
