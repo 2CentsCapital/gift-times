@@ -59,7 +59,7 @@ const CATEGORY_META: Record<string, { label: string; family: Family }> = {
   "Market Infrastructure Institutions": { label: "Market Infrastructure", family: "markets" },
   "Metals & Commodities entities": { label: "Metals & Commodities", family: "bullion" },
   "Qualified Jewellers": { label: "Qualified Jewellers", family: "bullion" },
-  "BATF Service Providers": { label: "Bullion (BATF) Providers", family: "bullion" },
+  "BATF Service Providers": { label: "Accounting & Tax (BATF)", family: "services" },
   Banking: { label: "Banking Units", family: "banking" },
   "Finance Company": { label: "Finance Companies", family: "banking" },
   "Payment Service Provider": { label: "Payment Services", family: "banking" },
