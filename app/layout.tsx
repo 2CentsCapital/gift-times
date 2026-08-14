@@ -85,12 +85,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="wordmark" aria-label="GIFT City Times — home">
               GIFT City Times
             </Link>
-            <div className="byline">
-              by{" "}
-              <a href="https://valura.ai" target="_blank" rel="noopener noreferrer">
-                valura.ai
-              </a>
-            </div>
           </div>
           <div className="dateline">
             <span>{longDate()}</span>
@@ -114,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="container">{children}</main>
         <footer className="footer">
           <div>
-            <strong>GIFT City Times</strong> · An automated chronicle of GIFT IFSC · by{" "}
+            <strong>GIFT City Times</strong> · An automated chronicle of GIFT IFSC · maintained by{" "}
             <a href="https://valura.ai" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
               valura.ai
             </a>

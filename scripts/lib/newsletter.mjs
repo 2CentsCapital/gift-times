@@ -112,7 +112,6 @@ export function buildNewsletter(changes, siteUrl, editionDate, unsubscribeUrl = 
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fbf9f3;border:1px solid #e0d9c8;">
         <tr><td style="padding:28px 32px 8px;text-align:center;border-bottom:3px double #1a1a1a;">
           <div style="font:700 34px/1 Georgia,serif;letter-spacing:1px;color:#1a1a1a;">GIFT City Times</div>
-          <div style="font:400 10px/1 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#a89e88;margin-top:5px;">by <a href="https://valura.ai" style="color:#7a1f1f;text-decoration:none;">valura.ai</a></div>
           <div style="font:400 12px/1 Arial,sans-serif;letter-spacing:3px;text-transform:uppercase;color:#8a8272;margin-top:8px;">Daily intelligence on GIFT IFSC · ${esc(dateLabel)}</div>
         </td></tr>
         <tr><td style="padding:0 32px;"><table width="100%" cellpadding="0" cellspacing="0">${body}</table></td></tr>
@@ -120,7 +119,7 @@ export function buildNewsletter(changes, siteUrl, editionDate, unsubscribeUrl = 
           <a href="${esc(siteUrl)}" style="display:inline-block;background:#1a1a1a;color:#fbf9f3;font:600 13px/1 Arial,sans-serif;letter-spacing:1px;text-decoration:none;padding:14px 28px;">READ TODAY’S EDITION →</a>
         </td></tr>
         <tr><td style="padding:16px 32px 28px;border-top:1px solid #e0d9c8;text-align:center;font:400 11px/1.5 Arial,sans-serif;color:#a89e88;">
-          GIFT City Times · by <a href="https://valura.ai" style="color:#7a1f1f;">valura.ai</a> · Automated from IFSCA public disclosures${
+          GIFT City Times · Automated from IFSCA public disclosures · maintained by <a href="https://valura.ai" style="color:#7a1f1f;">valura.ai</a>${
             unsubscribeUrl
               ? ` · <a href="${esc(unsubscribeUrl)}" style="color:#a89e88;">Unsubscribe</a>`
               : ""
