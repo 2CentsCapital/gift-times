@@ -130,6 +130,14 @@ alter table people       enable row level security;
 alter table publications enable row level security;
 alter table changes      enable row level security;
 
+-- Private tables: enable RLS with NO anon policies so the public/anon role is
+-- fully denied. The service_role key (used by the API + scripts) bypasses RLS,
+-- so subscribe/ingest/newsletter keep working. This protects subscriber PII
+-- and internal operational logs from the public anon key.
+alter table subscribers      enable row level security;
+alter table ingest_runs      enable row level security;
+alter table newsletter_sends enable row level security;
+
 do $$
 begin
   if not exists (select 1 from pg_policies where tablename='entities' and policyname='public_read') then
