@@ -3,6 +3,7 @@ import "./globals.css";
 import Link from "next/link";
 import { DESKS, longDate } from "@/lib/format";
 import SearchBox from "@/components/SearchBox";
+import ConnectWithClaude from "@/components/ConnectWithClaude";
 
 const SITE = "https://giftcitytimes.com";
 const DESCRIPTION =
@@ -105,7 +106,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SearchBox />
           </div>
         </header>
-        <main className="container">{children}</main>
+        <main className="container">
+          {children}
+          <ConnectWithClaude />
+        </main>
         <footer className="footer">
           <div>
             <strong>GIFT City Times</strong> · An automated chronicle of GIFT IFSC · maintained by{" "}
