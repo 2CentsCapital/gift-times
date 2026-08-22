@@ -1,6 +1,8 @@
-# The GIFT Times
+# GIFT City Times
 
-An automated daily newspaper on **GIFT IFSC**, sourced from IFSCA public disclosures.
+**Live at [giftcitytimes.com](https://giftcitytimes.com)** — an automated daily newspaper and registry for **GIFT IFSC**, sourced from IFSCA public disclosures.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) · Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - **Database** — Supabase (Postgres): entities, contact persons, publications, change log, subscribers.
 - **Ingestion** — `scripts/ingest.mjs`: full backfill on first run, daily diff after. Records every new/removed entity, status change and new publication into `changes`.
