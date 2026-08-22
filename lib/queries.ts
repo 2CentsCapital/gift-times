@@ -245,13 +245,8 @@ export async function getEntityChanges(id: string): Promise<Change[]> {
   return (data as Change[]) || [];
 }
 
-export type PersonConnection = {
-  name: string;
-  entities: { id: string; name: string; desk: string | null; status: string | null }[];
-};
-
-// Reject IFSCA placeholder / junk contact names so they don't create spurious
-// "connections" (e.g. dozens of entities all listing "-" or "NA").
+// Reject IFSCA placeholder / junk contact names so they don't get their own
+// (empty) profile page or a link (e.g. entries listing "-" or "NA").
 export function isRealPersonName(n?: string | null): boolean {
   const t = (n || "").trim();
   if (t.length < 3) return false;
@@ -260,28 +255,48 @@ export function isRealPersonName(n?: string | null): boolean {
   return !["na", "nil", "none", "notavailable", "notapplicable"].includes(low) && low !== "";
 }
 
-// People graph: OTHER entities that share an authorised person with this one.
-// Exact (case-sensitive) name match — the same IFSCA-published person string.
-export async function getPeopleConnections(id: string, names: string[]): Promise<PersonConnection[]> {
-  const clean = [...new Set(names.map((n) => (n || "").trim()).filter(isRealPersonName))];
-  if (!clean.length) return [];
+export type PersonEntity = {
+  id: string;
+  name: string;
+  desk: string | null;
+  status: string | null;
+  category: string | null;
+  subcategory: string | null;
+  date_of_registration: string | null;
+};
+
+// A person's footprint across GIFT City: every entity where they are the
+// authorised / contact person. Keyed by the exact IFSCA-published name.
+export async function getPersonPortfolio(
+  name: string
+): Promise<{ role: string | null; email: string | null; entities: PersonEntity[] }> {
   const supa = getSupabase();
   const { data } = await supa
     .from("people")
-    .select("name, entities!inner(id, name, desk, status)")
-    .in("name", clean)
-    .neq("entity_id", id)
-    .limit(100);
+    .select("role, email, entities!inner(id, name, desk, status, category, subcategory, date_of_registration)")
+    .eq("name", name)
+    .limit(200);
 
-  const byName = new Map<string, PersonConnection["entities"]>();
+  const seen = new Set<string>();
+  const entities: PersonEntity[] = [];
+  let role: string | null = null;
+  let email: string | null = null;
   for (const row of (data as any[]) || []) {
-    const ent = row.entities;
-    if (!ent) continue;
-    if (!byName.has(row.name)) byName.set(row.name, []);
-    const arr = byName.get(row.name)!;
-    if (!arr.find((e) => e.id === ent.id)) arr.push(ent);
+    if (!role && row.role) role = row.role;
+    if (!email && row.email) email = row.email;
+    const e = row.entities;
+    if (!e || seen.has(e.id)) continue;
+    seen.add(e.id);
+    entities.push({
+      id: e.id,
+      name: e.name,
+      desk: e.desk,
+      status: e.status,
+      category: e.category,
+      subcategory: e.subcategory,
+      date_of_registration: e.date_of_registration,
+    });
   }
-  return [...byName.entries()]
-    .map(([name, entities]) => ({ name, entities }))
-    .filter((g) => g.entities.length);
+  entities.sort((a, b) => (b.date_of_registration || "").localeCompare(a.date_of_registration || ""));
+  return { role, email, entities };
 }

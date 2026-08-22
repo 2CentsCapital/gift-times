@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEntity, getEntityVersions, getEntityChanges, getPeopleConnections } from "@/lib/queries";
+import { getEntity, getEntityVersions, getEntityChanges, isRealPersonName } from "@/lib/queries";
 import { fmtDate, deskLabel } from "@/lib/format";
 import { buildTimeline } from "@/lib/timeline";
 
@@ -40,11 +40,9 @@ export default async function EntityPage({ params }: { params: { id: string } })
   const { entity, people } = await getEntity(params.id);
   if (!entity) notFound();
 
-  const personNames = [...people.map((p: any) => p.name), entity.contact_person].filter(Boolean) as string[];
-  const [versions, changeRows, connections] = await Promise.all([
+  const [versions, changeRows] = await Promise.all([
     getEntityVersions(entity.id),
     getEntityChanges(entity.id),
-    getPeopleConnections(entity.id, personNames),
   ]);
   const timeline = buildTimeline(entity, versions, changeRows);
 
@@ -163,35 +161,16 @@ export default async function EntityPage({ params }: { params: { id: string } })
       ) : (
         people.map((p) => (
           <div className="story" key={p.id}>
-            <h2 style={{ fontSize: 18, fontWeight: 600 }}>{p.name}</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 600 }}>
+              {isRealPersonName(p.name) ? (
+                <Link className="title" href={`/person/${encodeURIComponent(p.name)}`}>
+                  {p.name}
+                </Link>
+              ) : (
+                p.name
+              )}
+            </h2>
             <div className="meta">{[p.role, p.email].filter(Boolean).join(" · ")}</div>
-          </div>
-        ))
-      )}
-
-      <div className="section-head" style={{ marginTop: 30 }}>
-        <span>Connections</span>
-      </div>
-      {connections.length === 0 ? (
-        <p className="empty">No shared authorised persons found elsewhere in the register.</p>
-      ) : (
-        connections.map((g) => (
-          <div className="story" key={g.name}>
-            <div className="meta">
-              Shares authorised person <strong>{g.name}</strong> with {g.entities.length} other
-              {g.entities.length === 1 ? "" : "s"}
-            </div>
-            <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
-              {g.entities.map((en) => (
-                <li key={en.id} style={{ marginBottom: 4 }}>
-                  <Link href={`/entity/${en.id}`}>{en.name}</Link>
-                  <span style={{ color: "var(--muted)" }}>
-                    {en.desk ? ` · ${deskLabel(en.desk)}` : ""}
-                    {en.status && en.status !== "Active" ? ` · ${en.status}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
           </div>
         ))
       )}

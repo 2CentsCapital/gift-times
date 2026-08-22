@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { searchAll } from "@/lib/queries";
 import { fmtDate } from "@/lib/format";
-import SearchBox from "@/components/SearchBox";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +21,6 @@ export default async function SearchPage({
 
   return (
     <div style={{ padding: "24px 0", maxWidth: 820 }}>
-      <div style={{ marginBottom: 20 }}>
-        <SearchBox defaultValue={q} />
-      </div>
-
       {!q ? (
         <p className="empty">
           Search for any broker, fund, insurer, fintech, contact person, circular or notice.
@@ -41,7 +36,9 @@ export default async function SearchPage({
           ) : (
             results.map((r: any, i: number) => {
               const href =
-                r.result_type === "entity" || r.result_type === "person"
+                r.result_type === "person"
+                  ? `/person/${encodeURIComponent(r.title)}`
+                  : r.result_type === "entity"
                   ? `/entity/${r.id}`
                   : r.result_type === "sez"
                   ? "/desk/sez"
