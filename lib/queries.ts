@@ -1,5 +1,10 @@
 import { cache } from "react";
 import { getSupabase, getSupabaseFresh } from "./supabase";
+// isRealPersonName lives in format.ts so that modules needing only the
+// predicate (lib/network.ts) do not have to import React's cache() with it.
+import { isRealPersonName } from "./format";
+
+export { isRealPersonName };
 
 export type Change = {
   id: string;
@@ -248,15 +253,6 @@ export async function getEntityChanges(id: string): Promise<Change[]> {
   return (data as Change[]) || [];
 }
 
-// Reject IFSCA placeholder / junk contact names so they don't get their own
-// (empty) profile page or a link (e.g. entries listing "-" or "NA").
-export function isRealPersonName(n?: string | null): boolean {
-  const t = (n || "").trim();
-  if (t.length < 3) return false;
-  if (!/[A-Za-z]{2,}/.test(t)) return false; // must contain real letters
-  const low = t.toLowerCase().replace(/[.\s/]/g, "");
-  return !["na", "nil", "none", "notavailable", "notapplicable"].includes(low) && low !== "";
-}
 
 export type PersonEntity = {
   id: string;

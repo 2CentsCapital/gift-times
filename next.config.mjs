@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
+// Next's dev runtime (HMR / React Refresh) evaluates strings, so local
+// development needs 'unsafe-eval'. Production keeps the strict policy.
+const dev = process.env.NODE_ENV !== "production";
+
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self'",

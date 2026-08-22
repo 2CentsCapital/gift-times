@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getSupabase } from "@/lib/supabase";
 import { DESKS } from "@/lib/format";
+import { TOWER_KEYS } from "@/lib/towers";
 
 const SITE = "https://giftcitytimes.com";
 export const revalidate = 3600;
@@ -8,7 +9,13 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const urls: MetadataRoute.Sitemap = [
     { url: SITE, changeFrequency: "hourly", priority: 1 },
+    { url: `${SITE}/network`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE}/towers`, changeFrequency: "daily", priority: 0.8 },
   ];
+
+  for (const key of TOWER_KEYS) {
+    urls.push({ url: `${SITE}/towers/${key}`, changeFrequency: "weekly", priority: 0.7 });
+  }
 
   for (const d of DESKS) {
     urls.push({ url: `${SITE}/desk/${d.slug}`, changeFrequency: "daily", priority: 0.7 });

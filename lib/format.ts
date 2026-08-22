@@ -152,3 +152,13 @@ export function longDate(d = new Date()): string {
     year: "numeric",
   });
 }
+
+// Reject IFSCA placeholder / junk contact names so they do not create spurious
+// "connections" (e.g. dozens of entities all listing "-" or "NA").
+export function isRealPersonName(n?: string | null): boolean {
+  const t = (n || "").trim();
+  if (t.length < 3) return false;
+  if (!/[A-Za-z]{2,}/.test(t)) return false; // must contain real letters
+  const low = t.toLowerCase().replace(/[.\\s/]/g, "");
+  return !["na", "nil", "none", "notavailable", "notapplicable"].includes(low) && low !== "";
+}

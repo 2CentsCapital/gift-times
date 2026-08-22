@@ -35,3 +35,18 @@ export function getSupabaseFresh() {
     },
   });
 }
+
+// PostgREST caps a response at 1000 rows, so anything that needs the whole
+// table has to page through it.
+export async function selectAll<T>(table: string, columns: string): Promise<T[]> {
+  const supa = getSupabase();
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supa.from(table).select(columns).range(from, from + 999);
+    if (error) throw new Error(`${table}: ${error.message}`);
+    if (!data || data.length === 0) break;
+    out.push(...(data as T[]));
+    if (data.length < 1000) break;
+  }
+  return out;
+}
