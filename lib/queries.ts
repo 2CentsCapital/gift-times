@@ -205,3 +205,83 @@ export async function searchAll(q: string) {
 export function isEntityDesk(desk: string) {
   return ENTITY_DESKS.includes(desk);
 }
+
+// ---- Dossier: temporal history + relationship graph -----------------------
+
+export type EntityVersion = {
+  valid_from: string;
+  valid_to: string | null;
+  name: string | null;
+  status: string | null;
+  category: string | null;
+  subcategory: string | null;
+  contact_person: string | null;
+  registered_address: string | null;
+  validity_to: string | null;
+  first_version: boolean;
+};
+
+// All recorded states of an entity, oldest first (drives the dossier timeline).
+export async function getEntityVersions(id: string): Promise<EntityVersion[]> {
+  const supa = getSupabase();
+  const { data } = await supa
+    .from("entity_versions")
+    .select("valid_from, valid_to, name, status, category, subcategory, contact_person, registered_address, validity_to, first_version")
+    .eq("entity_id", id)
+    .order("valid_from", { ascending: true });
+  return (data as EntityVersion[]) || [];
+}
+
+// Change-log rows referencing this entity (pre-archive history + lifecycle).
+export async function getEntityChanges(id: string): Promise<Change[]> {
+  const supa = getSupabase();
+  const { data } = await supa
+    .from("changes")
+    .select("*")
+    .eq("ref_table", "entities")
+    .eq("ref_id", id)
+    .order("occurred_on", { ascending: false })
+    .limit(50);
+  return (data as Change[]) || [];
+}
+
+export type PersonConnection = {
+  name: string;
+  entities: { id: string; name: string; desk: string | null; status: string | null }[];
+};
+
+// Reject IFSCA placeholder / junk contact names so they don't create spurious
+// "connections" (e.g. dozens of entities all listing "-" or "NA").
+export function isRealPersonName(n?: string | null): boolean {
+  const t = (n || "").trim();
+  if (t.length < 3) return false;
+  if (!/[A-Za-z]{2,}/.test(t)) return false; // must contain real letters
+  const low = t.toLowerCase().replace(/[.\s/]/g, "");
+  return !["na", "nil", "none", "notavailable", "notapplicable"].includes(low) && low !== "";
+}
+
+// People graph: OTHER entities that share an authorised person with this one.
+// Exact (case-sensitive) name match — the same IFSCA-published person string.
+export async function getPeopleConnections(id: string, names: string[]): Promise<PersonConnection[]> {
+  const clean = [...new Set(names.map((n) => (n || "").trim()).filter(isRealPersonName))];
+  if (!clean.length) return [];
+  const supa = getSupabase();
+  const { data } = await supa
+    .from("people")
+    .select("name, entities!inner(id, name, desk, status)")
+    .in("name", clean)
+    .neq("entity_id", id)
+    .limit(100);
+
+  const byName = new Map<string, PersonConnection["entities"]>();
+  for (const row of (data as any[]) || []) {
+    const ent = row.entities;
+    if (!ent) continue;
+    if (!byName.has(row.name)) byName.set(row.name, []);
+    const arr = byName.get(row.name)!;
+    if (!arr.find((e) => e.id === ent.id)) arr.push(ent);
+  }
+  return [...byName.entries()]
+    .map(([name, entities]) => ({ name, entities }))
+    .filter((g) => g.entities.length);
+}

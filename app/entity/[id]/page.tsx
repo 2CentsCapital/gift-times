@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getEntity } from "@/lib/queries";
+import { getEntity, getEntityVersions, getEntityChanges, getPeopleConnections } from "@/lib/queries";
 import { fmtDate, deskLabel } from "@/lib/format";
+import { buildTimeline } from "@/lib/timeline";
 
 // ISR: entity pages change rarely; cache and revalidate every 30 min.
 export const revalidate = 1800;
@@ -38,6 +39,14 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 export default async function EntityPage({ params }: { params: { id: string } }) {
   const { entity, people } = await getEntity(params.id);
   if (!entity) notFound();
+
+  const personNames = [...people.map((p: any) => p.name), entity.contact_person].filter(Boolean) as string[];
+  const [versions, changeRows, connections] = await Promise.all([
+    getEntityVersions(entity.id),
+    getEntityChanges(entity.id),
+    getPeopleConnections(entity.id, personNames),
+  ]);
+  const timeline = buildTimeline(entity, versions, changeRows);
 
   const rows: [string, React.ReactNode][] = [
     ["Category", [entity.category, entity.subcategory].filter(Boolean).join(" · ")],
@@ -114,6 +123,39 @@ export default async function EntityPage({ params }: { params: { id: string } })
       </dl>
 
       <div className="section-head" style={{ marginTop: 30 }}>
+        <span>History</span>
+      </div>
+      <p style={{ color: "var(--muted)", fontSize: 13, margin: "2px 0 0" }}>
+        Field-level changes recorded from IFSCA — this record deepens over time.
+      </p>
+      {timeline.length === 0 ? (
+        <p className="empty">No recorded history yet.</p>
+      ) : (
+        <ol style={{ listStyle: "none", margin: "16px 0 0", padding: 0, borderLeft: "2px solid var(--rule)" }}>
+          {timeline.map((e, i) => (
+            <li key={i} style={{ position: "relative", padding: "0 0 18px 22px" }}>
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: -5,
+                  top: 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: ["registered", "entity_added"].includes(e.kind) ? "var(--accent)" : "var(--ink-soft)",
+                }}
+              />
+              <div style={{ font: "600 11px/1 var(--sans)", letterSpacing: ".4px", color: "var(--muted)", textTransform: "uppercase" }}>
+                {fmtDate(e.date)}
+              </div>
+              <div style={{ fontFamily: "var(--serif)", fontSize: 16, lineHeight: 1.4, marginTop: 3 }}>{e.title}</div>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <div className="section-head" style={{ marginTop: 30 }}>
         <span>Authorised / Contact Persons</span>
       </div>
       {people.length === 0 ? (
@@ -123,6 +165,33 @@ export default async function EntityPage({ params }: { params: { id: string } })
           <div className="story" key={p.id}>
             <h2 style={{ fontSize: 18, fontWeight: 600 }}>{p.name}</h2>
             <div className="meta">{[p.role, p.email].filter(Boolean).join(" · ")}</div>
+          </div>
+        ))
+      )}
+
+      <div className="section-head" style={{ marginTop: 30 }}>
+        <span>Connections</span>
+      </div>
+      {connections.length === 0 ? (
+        <p className="empty">No shared authorised persons found elsewhere in the register.</p>
+      ) : (
+        connections.map((g) => (
+          <div className="story" key={g.name}>
+            <div className="meta">
+              Shares authorised person <strong>{g.name}</strong> with {g.entities.length} other
+              {g.entities.length === 1 ? "" : "s"}
+            </div>
+            <ul style={{ margin: "8px 0 0", paddingLeft: 18 }}>
+              {g.entities.map((en) => (
+                <li key={en.id} style={{ marginBottom: 4 }}>
+                  <Link href={`/entity/${en.id}`}>{en.name}</Link>
+                  <span style={{ color: "var(--muted)" }}>
+                    {en.desk ? ` · ${deskLabel(en.desk)}` : ""}
+                    {en.status && en.status !== "Active" ? ` · ${en.status}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         ))
       )}
