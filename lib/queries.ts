@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { getSupabase } from "./supabase";
+import { getSupabase, getSupabaseFresh } from "./supabase";
 
 export type Change = {
   id: string;
@@ -176,7 +176,10 @@ export const getEntity = cache(
 );
 
 export async function searchAll(q: string) {
-  const supa = getSupabase();
+  // Search must always be live — never served from Next's Data Cache (a cached
+  // result would go stale as entities/publications change, or when the search_all
+  // function itself is updated). Use the no-store client.
+  const supa = getSupabaseFresh();
   // Cap length (DoS) — the term is parameterized to the RPC either way.
   const term = (q || "").slice(0, 80);
   const { data, error } = await supa.rpc("search_all", { q: term });
