@@ -1,0 +1,65 @@
+name: Deploy to Vercel
+
+# Auto-deploy to production on every push to main. Works across accounts: the
+# repo lives on GitHub (CrazyBisht) and deploys to a Vercel project on a
+# different account (karmeshbisht) purely via VERCEL_TOKEN — no Git integration
+# / account linking required.
+
+on:
+  push:
+    branches: [main]
+
+# Never run two production deploys at once; let an in-flight deploy finish.
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+env:
+  # Identifiers (not secrets) for the target Vercel project.
+  VERCEL_ORG_ID: team_DdUv5sF4D7E4Ig3Cfou2Dvcj
+  VERCEL_PROJECT_ID: prj_KFe5fEOnBTuG3zN2yVWyFKToJcsY
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for deploy token
+        id: guard
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::warning::VERCEL_TOKEN secret not set — add it in Settings → Secrets and variables → Actions to enable auto-deploy. Skipping."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.guard.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.guard.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - if: steps.guard.outputs.ready == 'true'
+        run: npm install --global vercel@latest
+
+      - if: steps.guard.outputs.ready == 'true'
+        name: Pull Vercel settings + production env
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - if: steps.guard.outputs.ready == 'true'
+        name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - if: steps.guard.outputs.ready == 'true'
+        name: Deploy prebuilt to production
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
