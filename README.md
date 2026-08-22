@@ -17,9 +17,27 @@ The site's tables and IFSCA's DataTables JSON APIs are wired in `scripts/lib/ifs
 IFSCA publishes one official contact person per entity — that is the "authorised individual"
 data captured here.
 
+## Time-series history
+
+The `entities` table is current-state only. To preserve how GIFT City changes over
+time — who registered when, who surrendered, address/validity/contact changes — every
+ingest also records each entity's state into an append-only `entity_versions` table
+(SCD Type-2, `db/history.sql`, engine in `scripts/lib/history.mjs`). A new version is
+written only when a tracked field actually changes, so it stays compact.
+
+This makes the register reconstructable **as of any date**:
+
+```sql
+-- the GIFT IFSC register exactly as it stood on a given day
+select * from entities_asof('2026-01-01'::timestamptz);
+```
+
+Because IFSCA only ever publishes the *current* register, this history cannot be
+back-filled after the fact — it only accrues from the day capture begins.
+
 ## Setup
 
-1. **Supabase** — create a project, run `db/schema.sql` in the SQL editor.
+1. **Supabase** — create a project, run `db/schema.sql` then `db/history.sql` in the SQL editor.
 2. **Env** — copy `.env.example` → `.env` and fill in (or set on Vercel + GitHub secrets).
 3. **Backfill** — `npm install && npm run ingest` (first run fetches every entity's detail).
 4. **Deploy** — `vercel` (env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SITE_URL`).

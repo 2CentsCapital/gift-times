@@ -10,6 +10,7 @@
 
 import { supa } from "./lib/supabase.mjs";
 import * as ifsca from "./lib/ifsca.mjs";
+import { snapshotEntityVersions } from "./lib/history.mjs";
 
 const LEGAL_KIND = {
   Regulations: "regulation",
@@ -594,7 +595,7 @@ async function main() {
     .single();
 
   const changes = [];
-  let entitySummary, pubSummary, sezSummary, refreshed = 0, storage = null, ok = true, errMsg = null;
+  let entitySummary, pubSummary, sezSummary, refreshed = 0, storage = null, versions = null, ok = true, errMsg = null;
   try {
     entitySummary = await ingestEntities(isFull, changes);
     console.log(`Entities: +${entitySummary.added} added, ${entitySummary.removed} removed, ${entitySummary.statusChanges} status changes (of ${entitySummary.total})`);
@@ -612,6 +613,17 @@ async function main() {
     }
     storage = await storageUsage();
     console.log(`Document mirror: ${storage.files} files, ${storage.mb} MB.`);
+
+    // Temporal history: snapshot every changed entity into `entity_versions`
+    // (SCD Type-2). Isolated + non-fatal — a failure here must never abort the
+    // core ingest or the newsletter.
+    try {
+      versions = await snapshotEntityVersions(supa);
+      console.log(`History: +${versions.versionsWritten} entity versions (${versions.firstVersions} first, ${versions.superseded} superseded).`);
+    } catch (e) {
+      versions = { error: e.message };
+      console.error(`History snapshot failed (non-fatal): ${e.message}`);
+    }
 
     // On the FULL backfill we do NOT flood the change log with ~2200 "new"
     // rows — that's the baseline, not news. Daily runs record everything.
@@ -638,7 +650,7 @@ async function main() {
     .update({
       finished_at: new Date().toISOString(),
       ok,
-      summary: { entitySummary, pubSummary, sezSummary, refreshed, storage, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
+      summary: { entitySummary, pubSummary, sezSummary, refreshed, storage, versions, changeCount: changes.length, error: errMsg, seconds: (Date.now() - started) / 1000 },
     })
     .eq("id", run?.id);
 
