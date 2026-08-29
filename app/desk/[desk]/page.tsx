@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { DESK_BY_SLUG, deskLabel, fmtDate, sezStatusColors } from "@/lib/format";
+import { DESK_BY_SLUG, deskLabel, fmtDate, sezStatusColors, categoryMeta } from "@/lib/format";
 import { docHref } from "@/lib/doc";
 import {
   getEntitiesByDesk,
@@ -64,9 +64,32 @@ export default async function DeskPage({ params }: { params: { desk: string } })
 
   const sezMode = desk === "SEZ Approvals";
   const entityMode = isEntityDesk(desk) || desk === "Surrendered";
-  const entities = entityMode ? await getEntitiesByDesk(desk, 300) : [];
+  const entities = entityMode ? await getEntitiesByDesk(desk, 1000) : [];
   const pubs = entityMode || sezMode ? [] : await getDeskPublications(desk, 500);
   const meetings = sezMode ? await getSezMeetings(200) : [];
+
+  // Group entity rows by category → subcategory so the sub-structure is visible.
+  const groups = (() => {
+    const byCat = new Map<string, Map<string, typeof entities>>();
+    for (const e of entities) {
+      const cat = e.category || "Other";
+      const sub = e.subcategory || "Unclassified";
+      if (!byCat.has(cat)) byCat.set(cat, new Map());
+      const sm = byCat.get(cat)!;
+      if (!sm.has(sub)) sm.set(sub, []);
+      sm.get(sub)!.push(e);
+    }
+    return [...byCat.entries()]
+      .map(([cat, sm]) => ({
+        cat,
+        total: [...sm.values()].reduce((n, a) => n + a.length, 0),
+        subs: [...sm.entries()]
+          .map(([sub, arr]) => ({ sub, arr }))
+          .sort((a, b) => b.arr.length - a.arr.length),
+      }))
+      .sort((a, b) => b.total - a.total);
+  })();
+  const multiCat = groups.length > 1;
 
   return (
     <div style={{ padding: "24px 0" }}>
@@ -126,24 +149,57 @@ export default async function DeskPage({ params }: { params: { desk: string } })
         entities.length === 0 ? (
           <p className="empty">No entities recorded yet.</p>
         ) : (
-          entities.map((e) => (
-            <div className="story" key={e.id}>
-              <h3>
-                <Link className="title" href={`/entity/${e.id}`}>
-                  {e.name}
-                </Link>
-                {e.status && e.status !== "Active" && (
-                  <span className="pill" style={{ marginLeft: 10 }}>
-                    {e.status}
+          groups.map((g) => (
+            <section key={g.cat}>
+              {multiCat && (
+                <h2 style={{ fontFamily: "var(--serif)", fontSize: 22, lineHeight: 1.2, margin: "34px 0 2px", color: "var(--ink)" }}>
+                  {categoryMeta(g.cat).label}
+                  <span style={{ fontFamily: "var(--sans)", fontSize: 13, fontWeight: 400, color: "var(--muted)", marginLeft: 8 }}>
+                    · {g.total}
                   </span>
-                )}
-              </h3>
-              <div className="meta">
-                {[e.subcategory, e.registration_number, e.contact_person, fmtDate(e.date_of_registration)]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </div>
-            </div>
+                </h2>
+              )}
+              {g.subs.map(({ sub, arr }) => (
+                <div key={sub}>
+                  <div
+                    aria-label={`Subcategory: ${sub}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      margin: multiCat ? "18px 0 8px" : "28px 0 8px",
+                      paddingBottom: 6,
+                      borderBottom: "1px solid var(--rule)",
+                    }}
+                  >
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: categoryMeta(g.cat).color, flex: "0 0 auto" }} />
+                    <span style={{ fontFamily: "var(--sans)", fontSize: 12.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--ink)" }}>
+                      {sub}
+                    </span>
+                    <span style={{ fontFamily: "var(--sans)", fontSize: 12, color: "var(--muted)" }}>{arr.length}</span>
+                  </div>
+                  {arr.map((e) => (
+                    <div className="story" key={e.id}>
+                      <h3>
+                        <Link className="title" href={`/entity/${e.id}`}>
+                          {e.name}
+                        </Link>
+                        {e.status && e.status !== "Active" && (
+                          <span className="pill" style={{ marginLeft: 10 }}>
+                            {e.status}
+                          </span>
+                        )}
+                      </h3>
+                      <div className="meta">
+                        {[e.registration_number, e.contact_person, fmtDate(e.date_of_registration)]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </section>
           ))
         )
       ) : pubs.length === 0 ? (
