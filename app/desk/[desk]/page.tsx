@@ -14,17 +14,26 @@ export const revalidate = 900;
 
 const SITE = "https://giftcitytimes.com";
 
-export async function generateMetadata({ params }: { params: { desk: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: { desk: string };
+  searchParams: { sub?: string };
+}): Promise<Metadata> {
   const desk = DESK_BY_SLUG[params.desk];
   if (!desk) return { title: "Not found", robots: { index: false } };
   const label = deskLabel(desk);
-  const title = `${label} in GIFT IFSC`;
+  const sub = typeof searchParams?.sub === "string" ? searchParams.sub : undefined;
+  const title = sub ? `${sub} — ${label} in GIFT IFSC` : `${label} in GIFT IFSC`;
   const description = `${BLURB[desk] || label + " in GIFT IFSC."} Tracked and updated twice daily on GIFT City Times.`;
   return {
     title,
     description,
+    // Filtered views share the desk's canonical and aren't indexed (avoid dup content).
     alternates: { canonical: `/desk/${params.desk}` },
     openGraph: { title, description, url: `${SITE}/desk/${params.desk}`, type: "website" },
+    ...(sub ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
@@ -58,7 +67,33 @@ function docLinks(m: {
   return docs.filter(([, u]) => u);
 }
 
-export default async function DeskPage({ params }: { params: { desk: string } }) {
+function EntityRow({ e }: { e: any }) {
+  return (
+    <div className="story">
+      <h3>
+        <Link className="title" href={`/entity/${e.id}`}>
+          {e.name}
+        </Link>
+        {e.status && e.status !== "Active" && (
+          <span className="pill" style={{ marginLeft: 10 }}>
+            {e.status}
+          </span>
+        )}
+      </h3>
+      <div className="meta">
+        {[e.registration_number, e.contact_person, fmtDate(e.date_of_registration)].filter(Boolean).join(" · ")}
+      </div>
+    </div>
+  );
+}
+
+export default async function DeskPage({
+  params,
+  searchParams,
+}: {
+  params: { desk: string };
+  searchParams: { sub?: string };
+}) {
   const desk = DESK_BY_SLUG[params.desk];
   if (!desk) notFound();
 
@@ -90,6 +125,22 @@ export default async function DeskPage({ params }: { params: { desk: string } })
       .sort((a, b) => b.total - a.total);
   })();
   const multiCat = groups.length > 1;
+
+  // Flat subcategory index for the filter bar (across every category in the desk),
+  // and the currently-selected subcategory (if any).
+  const subIndex = (() => {
+    const m = new Map<string, { name: string; count: number; cat: string }>();
+    for (const e of entities) {
+      const name = e.subcategory || "Unclassified";
+      const cur = m.get(name);
+      if (cur) cur.count++;
+      else m.set(name, { name, count: 1, cat: e.category || "Other" });
+    }
+    return [...m.values()].sort((a, b) => b.count - a.count);
+  })();
+  const activeSub = typeof searchParams?.sub === "string" ? searchParams.sub : undefined;
+  const activeMeta = activeSub ? subIndex.find((s) => s.name === activeSub) : undefined;
+  const filtered = activeSub ? entities.filter((e) => (e.subcategory || "Unclassified") === activeSub) : entities;
 
   return (
     <div style={{ padding: "24px 0" }}>
@@ -149,58 +200,84 @@ export default async function DeskPage({ params }: { params: { desk: string } })
         entities.length === 0 ? (
           <p className="empty">No entities recorded yet.</p>
         ) : (
-          groups.map((g) => (
-            <section key={g.cat}>
-              {multiCat && (
-                <h2 style={{ fontFamily: "var(--serif)", fontSize: 22, lineHeight: 1.2, margin: "34px 0 2px", color: "var(--ink)" }}>
-                  {categoryMeta(g.cat).label}
-                  <span style={{ fontFamily: "var(--sans)", fontSize: 13, fontWeight: 400, color: "var(--muted)", marginLeft: 8 }}>
-                    · {g.total}
-                  </span>
-                </h2>
-              )}
-              {g.subs.map(({ sub, arr }) => (
-                <div key={sub}>
-                  <div
-                    aria-label={`Subcategory: ${sub}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      margin: multiCat ? "18px 0 8px" : "28px 0 8px",
-                      paddingBottom: 6,
-                      borderBottom: "1px solid var(--rule)",
-                    }}
-                  >
-                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: categoryMeta(g.cat).color, flex: "0 0 auto" }} />
-                    <span style={{ fontFamily: "var(--sans)", fontSize: 12.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--ink)" }}>
-                      {sub}
-                    </span>
-                    <span style={{ fontFamily: "var(--sans)", fontSize: 12, color: "var(--muted)" }}>{arr.length}</span>
-                  </div>
-                  {arr.map((e) => (
-                    <div className="story" key={e.id}>
-                      <h3>
-                        <Link className="title" href={`/entity/${e.id}`}>
-                          {e.name}
+          <>
+            {/* Subcategory filter bar — every subcategory, always visible, one click to isolate it. */}
+            <nav className="subnav" aria-label="Filter by subcategory">
+              <Link href={`/desk/${params.desk}`} className={!activeSub ? "active" : ""}>
+                All <span className="n">{entities.length}</span>
+              </Link>
+              {subIndex.map((s) => (
+                <Link
+                  key={s.name}
+                  href={`/desk/${params.desk}?sub=${encodeURIComponent(s.name)}`}
+                  className={activeSub === s.name ? "active" : ""}
+                >
+                  {s.name} <span className="n">{s.count}</span>
+                </Link>
+              ))}
+            </nav>
+
+            {activeSub ? (
+              /* One subcategory, completely separated. */
+              <>
+                <div className="section-head" style={{ marginTop: 10 }}>
+                  <h2 style={{ fontSize: 20, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 11, height: 11, borderRadius: "50%", background: categoryMeta(activeMeta?.cat || "").color, flex: "0 0 auto" }} />
+                    {activeSub}
+                  </h2>
+                  <span className="count">{filtered.length}</span>
+                </div>
+                {multiCat && activeMeta && (
+                  <p style={{ color: "var(--muted)", fontSize: 13, margin: "0 0 6px" }}>in {categoryMeta(activeMeta.cat).label}</p>
+                )}
+                {filtered.length === 0 ? (
+                  <p className="empty">No entities in this subcategory.</p>
+                ) : (
+                  filtered.map((e) => <EntityRow key={e.id} e={e} />)
+                )}
+              </>
+            ) : (
+              /* Overview — each subcategory as its own block, previewed, with a link to the full list. */
+              groups.map((g) => (
+                <section key={g.cat}>
+                  {multiCat && (
+                    <h2 style={{ fontFamily: "var(--serif)", fontSize: 22, lineHeight: 1.2, margin: "30px 0 2px", color: "var(--ink)" }}>
+                      {categoryMeta(g.cat).label}
+                      <span style={{ fontFamily: "var(--sans)", fontSize: 13, fontWeight: 400, color: "var(--muted)", marginLeft: 8 }}>· {g.total}</span>
+                    </h2>
+                  )}
+                  {g.subs.map(({ sub, arr }) => (
+                    <div key={sub}>
+                      <Link
+                        href={`/desk/${params.desk}?sub=${encodeURIComponent(sub)}`}
+                        aria-label={`View only ${sub}`}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          margin: multiCat ? "16px 0 8px" : "22px 0 8px",
+                          paddingBottom: 6,
+                          borderBottom: "1px solid var(--rule)",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <span style={{ width: 9, height: 9, borderRadius: "50%", background: categoryMeta(g.cat).color, flex: "0 0 auto" }} />
+                        <span style={{ fontFamily: "var(--sans)", fontSize: 12.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", color: "var(--ink)" }}>{sub}</span>
+                        <span style={{ fontFamily: "var(--sans)", fontSize: 12, color: "var(--muted)" }}>{arr.length}</span>
+                        <span style={{ marginLeft: "auto", fontFamily: "var(--sans)", fontSize: 11, color: "var(--accent)" }}>view →</span>
+                      </Link>
+                      {arr.slice(0, 8).map((e) => <EntityRow key={e.id} e={e} />)}
+                      {arr.length > 8 && (
+                        <Link className="readmore" href={`/desk/${params.desk}?sub=${encodeURIComponent(sub)}`} style={{ display: "inline-block", margin: "2px 0 6px" }}>
+                          See all {arr.length} →
                         </Link>
-                        {e.status && e.status !== "Active" && (
-                          <span className="pill" style={{ marginLeft: 10 }}>
-                            {e.status}
-                          </span>
-                        )}
-                      </h3>
-                      <div className="meta">
-                        {[e.registration_number, e.contact_person, fmtDate(e.date_of_registration)]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </div>
+                      )}
                     </div>
                   ))}
-                </div>
-              ))}
-            </section>
-          ))
+                </section>
+              ))
+            )}
+          </>
         )
       ) : pubs.length === 0 ? (
         <p className="empty">No publications recorded yet.</p>
