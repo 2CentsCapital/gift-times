@@ -64,8 +64,13 @@ export async function GET(req: NextRequest) {
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const buf = Buffer.from(await r.arrayBuffer());
-      const contentType = r.headers.get("content-type") || "application/pdf";
-      await supa.storage.from(BUCKET).upload(key, buf, { contentType, upsert: true });
+      // IFSCA sometimes returns HTTP 200 with a JSON metadata record instead of
+      // the actual file (e.g. in the minutes/hours right after a document is
+      // published). Never cache that — require the real PDF header, otherwise
+      // treat it as unavailable so a bad response can't get stuck in the mirror.
+      const isPdf = buf.length > 200 && buf.subarray(0, 5).toString("latin1") === "%PDF-";
+      if (!isPdf) throw new Error(`not a PDF (${buf.length} bytes)`);
+      await supa.storage.from(BUCKET).upload(key, buf, { contentType: "application/pdf", upsert: true });
       return NextResponse.redirect(publicUrl, 302);
     } catch {
       if (attempt === 1) return unavailable(raw);
