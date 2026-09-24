@@ -96,7 +96,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
           <nav className="nav" aria-label="Sections">
             <Link href="/">Front Page</Link>
-            <Link href="/network">Network</Link>
             <Link href="/towers">Skyline</Link>
             {DESKS.map((d) => (
               <Link key={d.slug} href={`/desk/${d.slug}`}>

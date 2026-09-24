@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { getSupabase, getSupabaseFresh } from "./supabase";
 // isRealPersonName lives in format.ts so that modules needing only the
-// predicate (lib/network.ts) do not have to import React's cache() with it.
+// predicate do not have to import React's cache() along with it.
 import { isRealPersonName } from "./format";
 
 export { isRealPersonName };
