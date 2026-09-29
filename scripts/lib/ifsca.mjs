@@ -23,11 +23,23 @@ const HEADERS = {
   "User-Agent": "Mozilla/5.0 (Macintosh) gift-times-ingest",
 };
 
-async function getJson(path, params) {
+// ifsca.gov.in is frequently slow or briefly unreachable (especially in the
+// early-morning window), and undici's default 10s connect timeout would make a
+// single stalled request throw "fetch failed" and abort the whole ingest run.
+// Give each request a generous timeout and retry with backoff before giving up.
+async function getJson(path, params, attempt = 0) {
   const url = `${BASE}/${path}?${new URLSearchParams(params).toString()}`;
-  const res = await fetch(url, { headers: HEADERS });
-  if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
-  return res.json();
+  try {
+    const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(30000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    if (attempt < 3) {
+      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1))); // 2s, 4s, 6s
+      return getJson(path, params, attempt + 1);
+    }
+    throw new Error(`${path} -> ${e?.message || e} (after ${attempt + 1} attempts)`);
+  }
 }
 
 function baseParams(length) {
