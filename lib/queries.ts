@@ -125,6 +125,26 @@ export async function getDeskEntities(desk: string, limit = 6): Promise<Entity[]
   return (data as Entity[]) || [];
 }
 
+// A register card driven by category rather than desk — e.g. bullion & jewellers,
+// which live in the catch-all "Other" desk but form one coherent segment.
+export async function getCategoryCard(
+  cats: string[],
+  limit = 4
+): Promise<{ count: number; entities: Entity[] }> {
+  const supa = getSupabase();
+  const [{ count }, { data }] = await Promise.all([
+    supa.from("entities").select("*", { count: "exact", head: true }).eq("status", "Active").in("category", cats),
+    supa
+      .from("entities")
+      .select("*")
+      .eq("status", "Active")
+      .in("category", cats)
+      .order("date_of_registration", { ascending: false, nullsFirst: false })
+      .limit(limit),
+  ]);
+  return { count: count || 0, entities: (data as Entity[]) || [] };
+}
+
 export async function getDeskPublications(desk: string, limit = 6): Promise<Publication[]> {
   const supa = getSupabase();
   const { data } = await supa
