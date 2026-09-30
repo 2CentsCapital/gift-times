@@ -31,14 +31,24 @@ async function getJson(path, params, attempt = 0) {
   const url = `${BASE}/${path}?${new URLSearchParams(params).toString()}`;
   try {
     const res = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(30000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      const he = new Error(`HTTP ${res.status}`);
+      he.httpStatus = res.status;
+      throw he;
+    }
     return await res.json();
   } catch (e) {
     if (attempt < 3) {
       await new Promise((r) => setTimeout(r, 2000 * (attempt + 1))); // 2s, 4s, 6s
       return getJson(path, params, attempt + 1);
     }
-    throw new Error(`${path} -> ${e?.message || e} (after ${attempt + 1} attempts)`);
+    const err = new Error(`${path} -> ${e?.message || e} (after ${attempt + 1} attempts)`);
+    // No HTTP status => a connect/DNS/timeout failure: IFSCA is simply
+    // unreachable from here (common from GitHub's CI egress at some hours).
+    // Tag it so ingest can skip the run gracefully instead of hard-failing.
+    // HTTP status errors stay untagged — those signal a real API problem.
+    if (!e?.httpStatus) err.code = "IFSCA_UNREACHABLE";
+    throw err;
   }
 }
 

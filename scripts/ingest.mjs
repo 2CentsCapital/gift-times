@@ -595,7 +595,7 @@ async function main() {
     .single();
 
   const changes = [];
-  let entitySummary, pubSummary, sezSummary, refreshed = 0, storage = null, versions = null, ok = true, errMsg = null;
+  let entitySummary, pubSummary, sezSummary, refreshed = 0, storage = null, versions = null, ok = true, errMsg = null, errCode = null;
   try {
     entitySummary = await ingestEntities(isFull, changes);
     console.log(`Entities: +${entitySummary.added} added, ${entitySummary.removed} removed, ${entitySummary.statusChanges} status changes (of ${entitySummary.total})`);
@@ -642,6 +642,7 @@ async function main() {
   } catch (e) {
     ok = false;
     errMsg = e.message;
+    errCode = e?.code || null;
     console.error("INGEST ERROR:", e);
   }
 
@@ -654,7 +655,19 @@ async function main() {
     })
     .eq("id", run?.id);
 
-  if (!ok) process.exit(1);
+  if (!ok) {
+    if (errCode === "IFSCA_UNREACHABLE") {
+      // Upstream outage, not a bug. Exit 0 so the cron doesn't raise a
+      // false-alarm failure; ingest is diff-based, so the next run catches up.
+      // (The ingest_runs row above still records ok=false + the error.)
+      console.warn(
+        "⚠️  IFSCA was unreachable this run (transient CI/upstream network). " +
+          "Skipping gracefully — the next scheduled run will catch up."
+      );
+    } else {
+      process.exit(1);
+    }
+  }
 }
 
 main();
