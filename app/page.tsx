@@ -7,60 +7,14 @@ import {
   getRecentChanges,
   type Entity,
   type Publication,
-  type Change,
 } from "@/lib/queries";
 import { fmtDate } from "@/lib/format";
 import { docHref } from "@/lib/doc";
 import { getHeroImage } from "@/lib/heroImage";
+import { buildLead } from "@/lib/lead";
 import Subscribe from "@/components/Subscribe";
 
 export const revalidate = 900; // ISR: refresh every 15 min (ingest is twice daily)
-
-// Change headlines are prefixed ("New registered entity: X", "New broker …: X").
-// Strip the prefix so we show the clean name in an editorial context.
-function cleanHeadline(h?: string | null): string {
-  const t = (h || "").trim();
-  return t.replace(/^new\s+[^:]*:\s*/i, "").trim() || t;
-}
-
-// ---- Editorial lead: build a sentence headline + italic standfirst from the
-// day's real additions, in the reference's broadsheet voice. ----
-
-function dominantCategory(changes: Change[]): string | null {
-  const n: Record<string, number> = {};
-  for (const c of changes) if (c.category) n[c.category] = (n[c.category] || 0) + 1;
-  const top = Object.entries(n).sort((a, b) => b[1] - a[1])[0];
-  return top ? top[0] : null;
-}
-
-function leadPhrase(cat: string | null): string {
-  const k = (cat || "").toLowerCase();
-  if (/jewel|bullion|metal|commodit/.test(k)) return "as jewellers and bullion houses pour in";
-  if (/broker|capital market|intermediar/.test(k)) return "as brokers and intermediaries line up";
-  if (/fund|aif/.test(k)) return "as fund managers pile in";
-  if (/bank|finance|payment/.test(k)) return "as banks and finance firms expand";
-  if (/insur/.test(k)) return "as insurers set up shop";
-  if (/fintech|sandbox/.test(k)) return "as fintech entrants join the sandbox";
-  return "";
-}
-
-function catDescriptor(cat: string | null): string {
-  const k = (cat || "").toLowerCase();
-  if (/jewel/.test(k)) return "qualified jewellers, bullion traders and metal recyclers";
-  if (/metal|bullion|commodit/.test(k)) return "bullion traders, metal recyclers and qualified jewellers";
-  if (/broker|capital market|intermediar/.test(k)) return "broker-dealers and market intermediaries";
-  if (/fund|aif/.test(k)) return "fund managers and alternative investment funds";
-  if (/bank|finance|payment/.test(k)) return "banking units and finance companies";
-  if (/insur/.test(k)) return "insurance offices and intermediaries";
-  if (/fintech|sandbox/.test(k)) return "fintech entrants";
-  return "newly licensed entities";
-}
-
-function andList(items: string[]): string {
-  if (items.length === 0) return "";
-  if (items.length === 1) return items[0];
-  return items.slice(0, -1).join(", ") + " and " + items[items.length - 1];
-}
 
 function shortDate(iso?: string | null): string {
   const d = iso ? new Date(iso) : new Date();
@@ -144,7 +98,7 @@ export default async function FrontPage() {
   const [{ counts, total }, changes, circ, regs, news, brokers, fmes, insurance, fintech, banking, bullion] =
     await Promise.all([
       getCounts(),
-      getRecentChanges(8),
+      getRecentChanges(60),
       getDeskPublications("Circulars", 7),
       getDeskPublications("Regulations", 5),
       getDeskPublications("News", 4),
@@ -169,27 +123,9 @@ export default async function FrontPage() {
     );
   }
 
-  // ---- Lead: an editorial milestone drawn from the day's real additions ----
-  const domCat = dominantCategory(changes);
-  const phrase = leadPhrase(domCat);
-  const leadHeadline = `GIFT IFSC register crosses ${total.toLocaleString("en-IN")} entities${
-    phrase ? " " + phrase : ""
-  }`;
-
+  // ---- Lead: real news — marquee registrations, the count, regulatory action ----
+  const lead = buildLead(changes, regs, total);
   const latestDate = changes[0]?.occurred_on || null;
-  const dateWord = latestDate
-    ? new Date(latestDate).toLocaleDateString("en-IN", { day: "numeric", month: "long" })
-    : "";
-  const otherNames = changes
-    .filter((c) => c.category !== domCat)
-    .map((c) => cleanHeadline(c.headline))
-    .filter(Boolean)
-    .slice(0, 2);
-  const leadStandfirst = domCat
-    ? `A fresh wave of ${catDescriptor(domCat)} joined the register${dateWord ? " on " + dateWord : ""}${
-        otherNames.length ? ", alongside " + andList(otherNames) : ""
-      }.`
-    : "New licences, circulars and approvals across GIFT IFSC — updated twice daily from IFSCA.";
 
   // Latest documents: circulars, regulations and press, newest first.
   const docsAll = [...circ, ...regs, ...news]
@@ -198,9 +134,9 @@ export default async function FrontPage() {
   const railStories = docsAll.slice(0, 4);
   const docs = docsAll.slice(4, 12);
 
-  // Two framed photos: the lead (matched to the day's dominant segment) and the rail.
+  // Two framed photos: the lead (matched to its subject) and the rail.
   const [leadHero, railHero] = await Promise.all([
-    getHeroImage(undefined, domCat || "Qualified Jewellers"),
+    getHeroImage(lead.imgDesk, lead.imgCategory),
     getHeroImage(railStories[0]?.desk || "Regulations", null),
   ]);
 
@@ -221,9 +157,9 @@ export default async function FrontPage() {
         <div className="frontgrid">
           {/* Lead story */}
           <div className="lead-col">
-            <div className="kicker kicker-accent">Lead Story</div>
-            <h3 className="lead-hl">{leadHeadline}</h3>
-            <p className="standfirst">{leadStandfirst}</p>
+            <div className="kicker kicker-accent">{lead.kicker}</div>
+            <h3 className="lead-hl">{lead.headline}</h3>
+            <p className="standfirst">{lead.standfirst}</p>
             <div className="byline">By the Markets Desk · {shortDate(latestDate)}</div>
 
             {leadHero && (
