@@ -68,7 +68,7 @@ function shortName(name: string): string {
 
 function notability(name: string, category?: string | null): number {
   const low = name.toLowerCase();
-  let s = (category && CAT_TIER[category]) ?? 1;
+  let s: number = category ? CAT_TIER[category] ?? 1 : 1;
   if (BRANDS.some((b) => low.includes(b))) s += 3;
   if (FINANCE_WORDS.some((w) => low.includes(w))) s += 1;
   return s;
