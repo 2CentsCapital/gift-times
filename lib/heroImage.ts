@@ -16,26 +16,36 @@ export type Hero = {
   sourceUrl: string | null;
 } | null;
 
-// Desk / category → a set of editorial searches with an India-financial flavour.
-function queriesFor(desk?: string | null, category?: string | null): string[] {
-  const key = (category || desk || "").toLowerCase();
-  if (/jewel|bullion|metal|gold|commodit/.test(key))
-    return ["gold bullion bars", "gold jewellery india", "precious metals vault"];
-  if (/fund|aif|asset manage/.test(key))
-    return ["stock market data screen", "financial charts trading", "investment finance"];
-  if (/broker|capital market|intermediar/.test(key))
-    return ["stock exchange building", "financial district trading", "wall street"];
-  if (/bank|finance company|payment/.test(key))
-    return ["bank skyscraper", "financial district skyline dusk", "corporate headquarters tower"];
-  if (/insur/.test(key)) return ["modern office towers", "corporate glass building", "business district"];
-  if (/fintech|sandbox|innovation/.test(key))
-    return ["fintech technology", "data center servers technology", "abstract network technology"];
-  if (/regulat|circular|consult|notif|law/.test(key))
-    return ["government finance building", "courthouse columns architecture", "official document desk"];
-  if (/sez|uac|approval|tender/.test(key))
-    return ["skyscraper construction", "cranes construction site city", "architecture blueprint"];
-  // Default: GIFT-City / Indian financial-hub feel.
-  return ["financial district skyline dusk", "mumbai business district", "modern city skyline towers"];
+// Images are chosen by what the story IS (its theme), not a loose keyword, so a
+// "new registrations" lead never gets a market chart. Each theme has a few
+// queries (niche-first, reliable fallbacks); we rotate and skip empties.
+// Note: no market-chart imagery outside the explicit "markets" theme.
+const THEME_QUERIES: Record<string, string[]> = {
+  // New firms setting up / registrations — the city and its offices, not charts.
+  newfirms: ["gift city gandhinagar", "financial district skyline dusk", "modern glass office towers", "mumbai business district", "corporate skyscraper city"],
+  bullion: ["gold bullion bars", "gold jewellery india", "precious metals vault"],
+  banking: ["bank headquarters skyscraper", "financial district towers", "corporate glass tower"],
+  insurance: ["corporate office towers", "modern glass office building", "business district skyline"],
+  fintech: ["data center servers technology", "abstract technology network", "fintech circuit board"],
+  // Rules, circulars, notifications — institutions and documents.
+  regulation: ["government building columns", "official document signing", "law courthouse architecture", "parliament building india"],
+  // Press releases, conferences, speeches — keep it corporate/finance, not civic/military.
+  news: ["business conference audience", "corporate boardroom meeting", "conference hall presentation", "financial district skyline dusk"],
+  // UAC approvals / tenders / build-out.
+  buildout: ["skyscraper construction site", "cranes city construction", "architecture blueprint"],
+  // Only genuine market-movement stories get a chart / exchange.
+  markets: ["stock exchange trading floor", "financial markets screen", "stock exchange building"],
+  default: ["financial district skyline dusk", "mumbai business district", "modern city skyline towers"],
+};
+
+// Map a publication desk/kind (for the rail) to a theme.
+export function themeForDesk(desk?: string | null): string {
+  const d = (desk || "").toLowerCase();
+  if (/regulat|circular|consult|notif/.test(d)) return "regulation";
+  if (/news|press/.test(d)) return "news";
+  if (/speech/.test(d)) return "news";
+  if (/tender|sez|career/.test(d)) return "buildout";
+  return "default";
 }
 
 function dayOfYear(d = new Date()): number {
@@ -115,7 +125,7 @@ async function fromOpenverse(queries: string[]): Promise<Hero> {
   }
 }
 
-export async function getHeroImage(desk?: string | null, category?: string | null): Promise<Hero> {
-  const queries = queriesFor(desk, category);
+export async function getHeroImage(theme?: string | null): Promise<Hero> {
+  const queries = THEME_QUERIES[(theme || "default").toLowerCase()] || THEME_QUERIES.default;
   return (await fromUnsplash(queries)) || (await fromOpenverse(queries));
 }

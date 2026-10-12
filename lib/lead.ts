@@ -10,9 +10,18 @@ export type Lead = {
   kicker: string;
   headline: string;
   standfirst: string;
-  imgDesk: string | null;
-  imgCategory: string | null;
+  imgTheme: string; // semantic theme for the hero image (see lib/heroImage.ts)
 };
+
+// What kind of imagery fits a registrations story about this segment?
+function themeForCategory(cat: string | null): string {
+  const k = (cat || "").toLowerCase();
+  if (/jewel|bullion|metal|commodit/.test(k)) return "bullion";
+  if (/fintech|sandbox/.test(k)) return "fintech";
+  // Banks, funds, brokers, insurers, etc. registering = firms setting up at
+  // GIFT City → the city and its offices, never a market chart.
+  return "newfirms";
+}
 
 const DAY = 86400000;
 
@@ -138,6 +147,13 @@ export function buildLead(changes: Change[], regs: Publication[], total: number)
   const notable = items.filter((i) => i.score >= 3).sort((a, b) => b.score - a.score);
   const count = batch.length;
 
+  // The dominant category in the batch (what most of the week's entrants are).
+  const domCat = (() => {
+    const n: Record<string, number> = {};
+    for (const i of items) if (i.category) n[i.category] = (n[i.category] || 0) + 1;
+    return Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  })();
+
   // Secondary news in the window.
   const reg = regs.find((r) => r.kind === "regulation" && inWeek(r.publish_date));
   const removed = changes.filter((c) => c.change_type === "entity_removed" && inWeek(c.occurred_on));
@@ -162,8 +178,7 @@ export function buildLead(changes: Change[], regs: Publication[], total: number)
       standfirst: `IFSCA's new rulebook lands as ${withCount(count, "firm")} join${
         count === 1 ? "s" : ""
       } GIFT IFSC this week${notable.length ? `, led by ${andList(notable.slice(0, 3).map((n) => n.short))}` : ""}.`,
-      imgDesk: "Regulations",
-      imgCategory: null,
+      imgTheme: "regulation",
     };
   }
 
@@ -173,7 +188,8 @@ export function buildLead(changes: Change[], regs: Publication[], total: number)
     const headline = `${andList(names)} ${names.length > 1 ? "lead" : "leads"} ${count} new GIFT IFSC registrations`;
     const mix = describeMix(batch);
     const standfirst = `This week's entrants span ${mix}${extras.length ? `; ${andList(extras)}` : ""}.`;
-    return { kicker: "New Registrations", headline, standfirst, imgDesk: null, imgCategory: notable[0].category };
+    // Match the image to the firms the headline names, not the bulk.
+    return { kicker: "New Registrations", headline, standfirst, imgTheme: themeForCategory(notable[0]?.category || domCat) };
   }
 
   // (3) Routine week — still frame it as movement, not a vanity total.
@@ -184,7 +200,6 @@ export function buildLead(changes: Change[], regs: Publication[], total: number)
     standfirst: `A steady week of registrations takes the IFSC to ${total.toLocaleString("en-IN")} licensed entities${
       extras.length ? `; ${andList(extras)}` : ""
     }.`,
-    imgDesk: null,
-    imgCategory: batch[0]?.category || null,
+    imgTheme: themeForCategory(domCat || batch[0]?.category || null),
   };
 }

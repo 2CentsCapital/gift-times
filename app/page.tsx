@@ -10,7 +10,7 @@ import {
 } from "@/lib/queries";
 import { fmtDate } from "@/lib/format";
 import { docHref } from "@/lib/doc";
-import { getHeroImage } from "@/lib/heroImage";
+import { getHeroImage, themeForDesk } from "@/lib/heroImage";
 import { buildLead } from "@/lib/lead";
 import Subscribe from "@/components/Subscribe";
 
@@ -134,10 +134,10 @@ export default async function FrontPage() {
   const railStories = docsAll.slice(0, 4);
   const docs = docsAll.slice(4, 12);
 
-  // Two framed photos: the lead (matched to its subject) and the rail.
+  // Two framed photos, matched to each story's theme (not a loose keyword).
   const [leadHero, railHero] = await Promise.all([
-    getHeroImage(lead.imgDesk, lead.imgCategory),
-    getHeroImage(railStories[0]?.desk || "Regulations", null),
+    getHeroImage(lead.imgTheme),
+    getHeroImage(themeForDesk(railStories[0]?.desk)),
   ]);
 
   return (
