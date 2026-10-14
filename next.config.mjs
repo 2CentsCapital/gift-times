@@ -26,6 +26,8 @@ const securityHeaders = [
 
 const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
+  // undici is loaded as a real Node module (it ships WASM), not bundled.
+  experimental: { serverComponentsExternalPackages: ["undici"] },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
