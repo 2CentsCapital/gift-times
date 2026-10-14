@@ -4,11 +4,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) · Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-- **Database** — Supabase (Postgres): entities, contact persons, publications, change log, subscribers.
-- **Ingestion** — `scripts/ingest.mjs`: full backfill on first run, daily diff after. Records every new/removed entity, status change and new publication into `changes`.
-- **Website** — Next.js (App Router) on Vercel: front page, desks (Brokers, FMEs, Insurance, Fintech, Banking, Circulars, Regulations, News, Consultations), entity pages, and **universal search** (by entity, person or document).
-- **Newsletter** — `scripts/send-newsletter.mjs`: a sectioned 6am digest via Resend, linking back to the site.
-- **Cron** — GitHub Actions (`.github/workflows/daily.yml`): ingest → newsletter, in order, every morning.
+- **Database**: Supabase (Postgres, self-hosted) with entities, contact persons, publications, change log, subscribers.
+- **Ingestion**: `scripts/ingest.mjs` does a full backfill on first run, daily diff after. Records every new/removed entity, status change and new publication into `changes`.
+- **Website**: Next.js (App Router), self-hosted on Coolify, deploys on every push to `main`. Front page, desks (Brokers, FMEs, Insurance, Fintech, Banking, Circulars, Regulations, News, Consultations), entity pages, and **universal search** (by entity, person or document).
+- **Newsletter**: `scripts/send-newsletter.mjs` sends a sectioned digest at 6am and 4pm IST via Resend, linking back to the site.
+- **Cron**: GitHub Actions (`.github/workflows/daily.yml`) runs ingest → newsletter, in order, twice a day. Runs only in `2CentsCapital/gift-times`.
 
 ## Data source
 
@@ -37,12 +37,13 @@ back-filled after the fact — it only accrues from the day capture begins.
 
 ## Setup
 
-1. **Supabase** — create a project, run `db/schema.sql` then `db/history.sql` in the SQL editor.
-2. **Env** — copy `.env.example` → `.env` and fill in (or set on Vercel + GitHub secrets).
-3. **Backfill** — `npm install && npm run ingest` (first run fetches every entity's detail).
-4. **Deploy** — `vercel` (env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SITE_URL`).
-5. **Cron** — add repo secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
-   `FROM_EMAIL`, `OWNER_EMAIL`, `SITE_URL`); the workflow runs daily at 05:50 IST.
+1. **Supabase**: create a project, run `db/schema.sql` then `db/history.sql` in the SQL editor.
+2. **Env**: copy `.env.example` → `.env` and fill in (or set on the host + GitHub secrets).
+3. **Backfill**: `npm install && npm run ingest` (first run fetches every entity's detail).
+4. **Deploy**: any Node host running `next build && next start` (env vars: `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `SITE_URL`, `UNSUB_SECRET`, `RESEND_API_KEY`, `FROM_EMAIL`).
+5. **Cron**: add repo secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
+   `FROM_EMAIL`, `OWNER_EMAIL`, `SITE_URL`, `UNSUB_SECRET`); the workflow runs at 06:00 and 16:00 IST.
 
 ## Scripts
 
