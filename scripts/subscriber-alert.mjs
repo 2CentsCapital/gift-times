@@ -10,7 +10,12 @@
 import { supa } from "./lib/supabase.mjs";
 
 const FROM = process.env.FROM_EMAIL || "GIFT City Times <updates@giftcitytimes.com>";
-const OWNER = (process.env.OWNER_EMAIL || "").trim();
+// OWNER_EMAIL may list several addresses, comma separated: the first gets the
+// report, the rest are cc'd.
+const [OWNER, ...CC] = (process.env.OWNER_EMAIL || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const SITE_URL = (process.env.SITE_URL || "https://giftcitytimes.com").replace(/\/$/, "");
 const ALWAYS = (process.env.ALERT_ALWAYS || "false").toLowerCase() === "true";
 
@@ -18,11 +23,11 @@ function esc(s) {
   return String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
-async function sendEmail(to, subject, html) {
+async function sendEmail(to, subject, html, cc = []) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify({ from: FROM, to, subject, html, ...(cc.length ? { cc } : {}) }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
   return res.json();
@@ -93,8 +98,8 @@ async function main() {
     </td></tr>
   </table></body></html>`;
 
-  await sendEmail(OWNER, subject, html);
-  console.log(`Subscriber report sent to ${OWNER}: total ${total}, +${newList.length} new.`);
+  await sendEmail(OWNER, subject, html, CC);
+  console.log(`Subscriber report sent to ${[OWNER, ...CC].join(", ")}: total ${total}, +${newList.length} new.`);
 }
 
 main().catch((e) => {
