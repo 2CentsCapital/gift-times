@@ -17,7 +17,11 @@ const FORCE = process.argv.includes("--force");
 const SITE_URL = (process.env.SITE_URL || "https://giftcitytimes.com").replace(/\/$/, "");
 const FROM = process.env.FROM_EMAIL || "GIFT City Times <onboarding@resend.dev>";
 const SEND_EMPTY = (process.env.SEND_EMPTY || "false").toLowerCase() === "true";
-const OWNER = (process.env.OWNER_EMAIL || "").trim().toLowerCase();
+// OWNER_EMAIL may list several addresses, comma separated; each gets its own copy.
+const OWNERS = (process.env.OWNER_EMAIL || "")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
 const UNSUB_SECRET = process.env.UNSUB_SECRET || "";
 
 // Same scheme as lib/token.ts (must match so links verify).
@@ -45,13 +49,14 @@ async function lastSendAt() {
 
 async function recipients() {
   const set = new Set();
-  if (process.env.OWNER_EMAIL) set.add(process.env.OWNER_EMAIL.trim());
+  for (const o of OWNERS) set.add(o);
   const { data } = await supa
     .from("subscribers")
     .select("email")
     .eq("confirmed", true)
     .is("unsubscribed_at", null);
-  for (const r of data || []) set.add(r.email);
+  // An owner who also subscribed gets one copy, the owner one.
+  for (const r of data || []) if (!OWNERS.includes(r.email.trim().toLowerCase())) set.add(r.email);
   return [...set];
 }
 
@@ -122,7 +127,7 @@ async function main() {
   let sent = 0;
   for (const addr of to) {
     try {
-      const isOwner = addr.trim().toLowerCase() === OWNER;
+      const isOwner = OWNERS.includes(addr.trim().toLowerCase());
       const unsub = isOwner ? null : unsubUrl(addr);
       const { html } = buildNewsletter(changes, SITE_URL, today, unsub);
       await sendEmail(addr, subject, html, unsub);
