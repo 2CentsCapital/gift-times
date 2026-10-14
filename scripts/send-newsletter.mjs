@@ -5,7 +5,7 @@
 //
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY,
 //      FROM_EMAIL (e.g. "GIFT City Times <onboarding@resend.dev>"),
-//      OWNER_EMAIL, SITE_URL, [SEND_EMPTY=false]
+//      OWNER_EMAIL, SITE_URL, UNSUB_SECRET, [SEND_EMPTY=false]
 // Run: node scripts/send-newsletter.mjs [--force]
 //   --force ignores the watermark and sends everything from the last 24h.
 
@@ -78,6 +78,8 @@ async function sendEmail(to, subject, html, listUnsub) {
 
 async function main() {
   if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
+  // Without it unsubUrl() returns null and subscribers get no unsubscribe link.
+  if (!UNSUB_SECRET) throw new Error("Missing UNSUB_SECRET");
   const today = new Date().toISOString().slice(0, 10);
   const nowIso = new Date().toISOString();
 

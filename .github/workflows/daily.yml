@@ -17,6 +17,9 @@ on:
 
 jobs:
   daily:
+    # Only the canonical repo ingests and mails. A copy or fork with its own
+    # secrets would otherwise write to another database and mail subscribers twice.
+    if: github.repository == '2CentsCapital/gift-times'
     runs-on: ubuntu-latest
     concurrency:
       group: gift-times-daily
@@ -28,6 +31,8 @@ jobs:
       FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
       OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
       SITE_URL: ${{ secrets.SITE_URL }}
+      # Signs the per-subscriber unsubscribe links; must match the site's value.
+      UNSUB_SECRET: ${{ secrets.UNSUB_SECRET }}
     steps:
       - uses: actions/checkout@v4
 
