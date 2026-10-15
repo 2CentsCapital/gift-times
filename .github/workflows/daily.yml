@@ -1,8 +1,10 @@
-name: GIFT Times — ingest + newsletter (6am & 4pm IST)
+name: GIFT Times — ingest (6am & 4pm IST) + morning newsletter
 
-# Twice daily. Ingest runs first, then the newsletter (only new items since
-# the last send). Scheduled early to absorb GitHub's cron delay (often ~1-2h)
-# so mail lands by ~8am and ~6pm IST.
+# Ingest twice daily so the site stays fresh; the newsletter goes out once, on
+# the morning run (every item logged since the last send, so the afternoon
+# ingest's items land in the next morning's edition). One edition a day keeps
+# Resend volume at one email per subscriber per day.
+# Scheduled early to absorb GitHub's cron delay (often ~1-2h).
 #   00:30 UTC = 06:00 IST, 10:30 UTC = 16:00 IST.
 on:
   schedule:
@@ -14,12 +16,16 @@ on:
         description: "Send the newsletter after ingest?"
         type: boolean
         default: false
+      resend_to:
+        description: "Re-send the latest edition ONLY to these addresses (comma separated). Skips ingest."
+        type: string
+        default: ""
 
 jobs:
   daily:
     # Only the canonical repo ingests and mails. A copy or fork with its own
     # secrets would otherwise write to another database and mail subscribers twice.
-    if: github.repository == '2CentsCapital/gift-times'
+    if: github.repository == '2CentsCapital/gift-times' && inputs.resend_to == ''
     runs-on: ubuntu-latest
     concurrency:
       group: gift-times-daily
@@ -47,8 +53,8 @@ jobs:
         run: node scripts/ingest.mjs
 
       - name: Send newsletter
-        # Sends on the scheduled run, or on manual runs only if requested.
-        if: github.event_name == 'schedule' || inputs.send_newsletter
+        # Morning scheduled run only, or on manual runs if requested.
+        if: github.event.schedule == '30 0 * * *' || inputs.send_newsletter
         run: node scripts/send-newsletter.mjs
 
       - name: Daily subscriber report (owner only, morning run)
@@ -56,3 +62,33 @@ jobs:
         # on days with new sign-ups (set ALERT_ALWAYS=true to send daily).
         if: github.event.schedule == '30 0 * * *' || github.event_name == 'workflow_dispatch'
         run: node scripts/subscriber-alert.mjs
+
+  resend:
+    # Manual re-send of the latest edition to named addresses (e.g. a failed
+    # send). The script reads the addresses from the event payload so they are
+    # never printed in this public log.
+    if: github.repository == '2CentsCapital/gift-times' && inputs.resend_to != ''
+    runs-on: ubuntu-latest
+    concurrency:
+      group: gift-times-daily
+      cancel-in-progress: false
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+      OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+      SITE_URL: ${{ secrets.SITE_URL }}
+      UNSUB_SECRET: ${{ secrets.UNSUB_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm ci --omit=optional || npm install
+
+      - name: Re-send latest edition
+        run: node scripts/send-newsletter.mjs --resend
