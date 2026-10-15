@@ -14,6 +14,14 @@ on:
         description: "Send the newsletter after ingest?"
         type: boolean
         default: false
+      resend_last:
+        description: "Only resend the last edition to the addresses in the NEWSLETTER_RESEND_TO secret (no ingest)"
+        type: boolean
+        default: false
+      dry_run:
+        description: "With resend_last: show who would get it, send nothing"
+        type: boolean
+        default: true
 
 jobs:
   daily:
@@ -44,15 +52,26 @@ jobs:
         run: npm ci --omit=optional || npm install
 
       - name: Ingest IFSCA data
+        if: ${{ !inputs.resend_last }}
         run: node scripts/ingest.mjs
 
       - name: Send newsletter
         # Sends on the scheduled run, or on manual runs only if requested.
-        if: github.event_name == 'schedule' || inputs.send_newsletter
+        if: ${{ !inputs.resend_last && (github.event_name == 'schedule' || inputs.send_newsletter) }}
         run: node scripts/send-newsletter.mjs
+
+      - name: Resend last edition
+        # For subscribers a send missed (their addresses come by mail to the
+        # owners). The list sits in a secret because this repo's logs are public.
+        if: ${{ inputs.resend_last }}
+        env:
+          RESEND_TO: ${{ secrets.NEWSLETTER_RESEND_TO }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/send-newsletter.mjs --resend-last
 
       - name: Daily subscriber report (owner only, morning run)
         # Once a day (06:00 IST run) + on manual dispatch. Emails the owner only
         # on days with new sign-ups (set ALERT_ALWAYS=true to send daily).
-        if: github.event.schedule == '30 0 * * *' || github.event_name == 'workflow_dispatch'
+        # Runs even when a newsletter send missed someone and failed the step.
+        if: ${{ !cancelled() && !inputs.resend_last && (github.event.schedule == '30 0 * * *' || github.event_name == 'workflow_dispatch') }}
         run: node scripts/subscriber-alert.mjs

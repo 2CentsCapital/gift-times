@@ -131,3 +131,18 @@ export function buildNewsletter(changes, siteUrl, editionDate, unsubscribeUrl = 
 
   return { subject, html };
 }
+
+// The last edition that actually went out, from newsletter_sends rows sorted
+// newest first. It covered changes created in (since, until]: since is the
+// send before it (the watermark it used), until is its own sent_at. Rows with
+// recipient_count 0 are skipped runs, not editions. Returns null if none.
+export function lastEditionWindow(rows) {
+  const i = (rows || []).findIndex((r) => (r.recipient_count || 0) > 0);
+  if (i < 0) return null;
+  const edition = rows[i];
+  const prev = rows[i + 1];
+  const since =
+    prev?.sent_at ||
+    new Date(new Date(edition.sent_at).getTime() - 24 * 3600 * 1000).toISOString();
+  return { since, until: edition.sent_at, sendDate: edition.send_date };
+}
