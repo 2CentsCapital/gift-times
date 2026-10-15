@@ -58,6 +58,12 @@ export function maskEmail(email) {
   return `${local.slice(0, 1)}***@${domain}`;
 }
 
+// Masks every address inside free text, such as a Resend error body.
+const EMAIL_IN_TEXT = /[^\s<>"'`(),;:]+@[^\s<>"'`(),;:]+\.[a-z]{2,}/gi;
+export function maskEmailsIn(text) {
+  return String(text).replace(EMAIL_IN_TEXT, (m) => maskEmail(m));
+}
+
 // "a@x.com, B@y.com\nc@z.com" -> ["a@x.com", "b@y.com", "c@z.com"], deduped.
 export function parseAddressList(text) {
   const out = new Set();

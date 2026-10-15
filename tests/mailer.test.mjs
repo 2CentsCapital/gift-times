@@ -3,6 +3,7 @@ import {
   createResendSender,
   retryDelayMs,
   maskEmail,
+  maskEmailsIn,
   parseAddressList,
 } from "../scripts/lib/mailer.mjs";
 import { lastEditionWindow } from "../scripts/lib/newsletter.mjs";
@@ -129,6 +130,14 @@ describe("maskEmail", () => {
   it("keeps the first letter and the domain only", () => {
     expect(maskEmail("rashi@axiomsync.com")).toBe("r***@axiomsync.com");
     expect(maskEmail("not-an-address")).toBe("***");
+  });
+  it("masks every address inside an error body", () => {
+    const body = 'Resend 422: {"message":"Invalid `to` field: bad.person@x.co.in, Ok <c@y.com>"}';
+    const out = maskEmailsIn(body);
+    expect(out).not.toContain("bad.person@");
+    expect(out).toContain("b***@x.co.in");
+    expect(out).toContain("<c***@y.com>");
+    expect(maskEmailsIn("Too many requests")).toBe("Too many requests");
   });
 });
 

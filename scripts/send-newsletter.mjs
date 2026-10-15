@@ -20,7 +20,7 @@
 import crypto from "crypto";
 import { supa } from "./lib/supabase.mjs";
 import { buildNewsletter, lastEditionWindow } from "./lib/newsletter.mjs";
-import { createResendSender, maskEmail, parseAddressList } from "./lib/mailer.mjs";
+import { createResendSender, maskEmail, maskEmailsIn, parseAddressList } from "./lib/mailer.mjs";
 
 const FORCE = process.argv.includes("--force");
 const RESEND_LAST = process.argv.includes("--resend-last");
@@ -65,11 +65,14 @@ async function lastSendAt() {
 async function recipients() {
   const set = new Set();
   for (const o of OWNERS) set.add(o);
-  const { data } = await supa
+  const { data, error } = await supa
     .from("subscribers")
     .select("email")
     .eq("confirmed", true)
     .is("unsubscribed_at", null);
+  // A failed lookup must stop the run: carrying on with owners only would move
+  // the watermark and every subscriber would lose this edition.
+  if (error) throw error;
   // An owner who also subscribed gets one copy, the owner one.
   for (const r of data || []) if (!OWNERS.includes(r.email.trim().toLowerCase())) set.add(r.email);
   return [...set];
@@ -102,7 +105,7 @@ async function sendEdition(to, changes, editionDate) {
       sent++;
     } catch (e) {
       missed.push(addr);
-      console.error(`  ! send failed to ${maskEmail(addr)}: ${e.message}`);
+      console.error(`  ! send failed to ${maskEmail(addr)}: ${maskEmailsIn(e.message)}`);
     }
   }
   console.log(`Sent "${subject}" (${changes.length} items) to ${sent}/${to.length} recipient(s).`);
@@ -134,7 +137,7 @@ daily workflow by hand with resend_last ticked (leave dry_run ticked first to ch
     });
     console.log(`The ${missed.length} missed address(es) were mailed to the owner(s).`);
   } catch (e) {
-    console.error(`  ! could not mail the missed list: ${e.message}`);
+    console.error(`  ! could not mail the missed list: ${maskEmailsIn(e.message)}`);
   }
 }
 
@@ -143,14 +146,26 @@ async function resendLast() {
   const wanted = parseAddressList(process.env.RESEND_TO);
   if (!wanted.length) throw new Error("--resend-last needs RESEND_TO (the addresses to send to)");
 
-  const { data: rows, error: sendsError } = await supa
+  // The last edition that went out, however many empty runs came after it,
+  // and the send just before it (the watermark it used).
+  const { data: edition, error: editionError } = await supa
     .from("newsletter_sends")
     .select("send_date, sent_at, recipient_count")
+    .gt("recipient_count", 0)
     .order("sent_at", { ascending: false })
-    .limit(50);
-  if (sendsError) throw sendsError;
-  const win = lastEditionWindow(rows);
-  if (!win) throw new Error("No edition has gone out yet; nothing to resend.");
+    .limit(1)
+    .maybeSingle();
+  if (editionError) throw editionError;
+  if (!edition) throw new Error("No edition has gone out yet; nothing to resend.");
+  const { data: prev, error: prevError } = await supa
+    .from("newsletter_sends")
+    .select("send_date, sent_at, recipient_count")
+    .lt("sent_at", edition.sent_at)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (prevError) throw prevError;
+  const win = lastEditionWindow(prev ? [edition, prev] : [edition]);
 
   const { data: changes, error } = await supa
     .from("changes")
