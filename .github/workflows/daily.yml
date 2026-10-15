@@ -20,6 +20,10 @@ on:
         description: "Re-send the latest edition ONLY to these addresses (comma separated). Skips ingest."
         type: string
         default: ""
+      dry_run:
+        description: "With resend_to: show which edition and how many would get it, send nothing"
+        type: boolean
+        default: false
 
 jobs:
   daily:
@@ -60,7 +64,8 @@ jobs:
       - name: Daily subscriber report (owner only, morning run)
         # Once a day (06:00 IST run) + on manual dispatch. Emails the owner only
         # on days with new sign-ups (set ALERT_ALWAYS=true to send daily).
-        if: github.event.schedule == '30 0 * * *' || github.event_name == 'workflow_dispatch'
+        # Runs even when a newsletter send missed someone and failed its step.
+        if: ${{ !cancelled() && (github.event.schedule == '30 0 * * *' || github.event_name == 'workflow_dispatch') }}
         run: node scripts/subscriber-alert.mjs
 
   resend:
@@ -91,4 +96,6 @@ jobs:
         run: npm ci --omit=optional || npm install
 
       - name: Re-send latest edition
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: node scripts/send-newsletter.mjs --resend

@@ -16,6 +16,12 @@ export function maskEmail(addr) {
   return `${user.slice(0, 1)}***@${domain}`;
 }
 
+// Masks every address inside free text, such as a Resend error body.
+const EMAIL_IN_TEXT = /[^\s<>"'`(),;:]+@[^\s<>"'`(),;:]+\.[a-z]{2,}/gi;
+export function maskEmailsIn(text) {
+  return String(text).replace(EMAIL_IN_TEXT, (m) => maskEmail(m));
+}
+
 // POST one email. Retries on 429 (honouring Retry-After) and 5xx; any other
 // error is thrown immediately.
 export async function postEmail(body, { apiKey, fetchFn = fetch, wait = sleep } = {}) {
