@@ -5,25 +5,25 @@
 //
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY,
 //      FROM_EMAIL (e.g. "GIFT City Times <onboarding@resend.dev>"),
-//      OWNER_EMAIL, SITE_URL, UNSUB_SECRET, [SEND_EMPTY=false], [DRY_RUN=false],
-//      [RESEND_TO] (for --resend-last)
-// Run: node scripts/send-newsletter.mjs [--force] [--resend-last] [--dry-run]
+//      OWNER_EMAIL, SITE_URL, UNSUB_SECRET, [SEND_EMPTY=false]
+// Run: node scripts/send-newsletter.mjs [--force | --resend]
 //   --force ignores the watermark and sends everything from the last 24h.
-//   --resend-last sends the last edition again, only to the addresses in
-//     RESEND_TO (comma or newline separated) that are still subscribed or are
-//     owners. The watermark is left alone. For subscribers a send missed.
-//   --dry-run (or DRY_RUN=true) shows what would go out; sends and writes nothing.
-//
-// The Actions logs of this repo are public: addresses are masked in output,
-// and the full list of anyone a send missed is mailed to the owners instead.
+//   --resend re-sends the LATEST edition (same items) to the addresses in
+//     RESEND_TO or the workflow_dispatch input `resend_to` (comma separated),
+//     e.g. people a failed send missed. Only current subscribers/owners are
+//     mailed, and the watermark is not touched. With DRY_RUN=true (or
+//     --dry-run) it only reports what it would send.
+// When a normal send misses anyone, the full list goes to the owners by mail
+// (the public log only shows masked addresses) and the run fails.
 
 import crypto from "crypto";
 import { supa } from "./lib/supabase.mjs";
+import { readFileSync } from "fs";
 import { buildNewsletter, lastEditionWindow } from "./lib/newsletter.mjs";
-import { createResendSender, maskEmail, maskEmailsIn, parseAddressList } from "./lib/mailer.mjs";
+import { postEmail, maskEmail, maskEmailsIn, sleep, SEND_GAP_MS } from "./lib/resend.mjs";
 
 const FORCE = process.argv.includes("--force");
-const RESEND_LAST = process.argv.includes("--resend-last");
+const RESEND = process.argv.includes("--resend");
 const DRY_RUN =
   process.argv.includes("--dry-run") || (process.env.DRY_RUN || "false").toLowerCase() === "true";
 const SITE_URL = (process.env.SITE_URL || "https://giftcitytimes.com").replace(/\/$/, "");
@@ -35,9 +35,6 @@ const OWNERS = (process.env.OWNER_EMAIL || "")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 const UNSUB_SECRET = process.env.UNSUB_SECRET || "";
-
-// Paced under Resend's 10 requests a second, retries a 429.
-const resendSend = createResendSender({ apiKey: process.env.RESEND_API_KEY });
 
 // Same scheme as lib/token.ts (must match so links verify).
 function unsubUrl(email) {
@@ -87,20 +84,21 @@ async function sendEmail(to, subject, html, listUnsub) {
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     };
   }
-  return resendSend(body);
+  return postEmail(body, { apiKey: process.env.RESEND_API_KEY });
 }
 
 // Build per recipient so each carries its own unsubscribe link. The owner
 // (added via OWNER_EMAIL, not a subscriber) gets no unsubscribe link.
-async function sendEdition(to, changes, editionDate) {
-  const { subject } = buildNewsletter(changes, SITE_URL, editionDate, null);
-  const missed = [];
+async function sendEdition(changes, to, date) {
+  const { subject } = buildNewsletter(changes, SITE_URL, date, null);
   let sent = 0;
-  for (const addr of to) {
+  const missed = [];
+  for (const [i, addr] of to.entries()) {
+    if (i > 0) await sleep(SEND_GAP_MS);
     try {
       const isOwner = OWNERS.includes(addr.trim().toLowerCase());
       const unsub = isOwner ? null : unsubUrl(addr);
-      const { html } = buildNewsletter(changes, SITE_URL, editionDate, unsub);
+      const { html } = buildNewsletter(changes, SITE_URL, date, unsub);
       await sendEmail(addr, subject, html, unsub);
       sent++;
     } catch (e) {
@@ -115,8 +113,8 @@ async function sendEdition(to, changes, editionDate) {
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-// Mails the owners who an edition missed, in full and ready to resend, since
-// the run log only shows masked addresses. Fails the run either way.
+// The log only shows masked addresses, so whoever an edition missed is mailed
+// to the owners in full, ready to paste into resend_to. Fails the run.
 async function reportMissed(subject, missed) {
   process.exitCode = 1;
   if (!OWNERS.length) {
@@ -124,83 +122,91 @@ async function reportMissed(subject, missed) {
     return;
   }
   const html = `<p>${missed.length} recipient(s) did not get "${escapeHtml(subject)}", even after retries.</p>
-<p>To send it to just them: put the list below in the repo secret NEWSLETTER_RESEND_TO, then run the
-daily workflow by hand with resend_last ticked (leave dry_run ticked first to check).</p>
-<pre>${missed.map(escapeHtml).join("\n")}</pre>`;
+<p>To send it to just them, run the daily workflow by hand with resend_to set to:</p>
+<pre>${missed.map(escapeHtml).join(", ")}</pre>`;
   try {
-    await resendSend({
-      from: FROM,
-      to: OWNERS[0],
-      cc: OWNERS.slice(1),
-      subject: `Missed: ${subject}`,
-      html,
-    });
+    await postEmail(
+      { from: FROM, to: OWNERS[0], cc: OWNERS.slice(1), subject: `Missed: ${subject}`, html },
+      { apiKey: process.env.RESEND_API_KEY },
+    );
     console.log(`The ${missed.length} missed address(es) were mailed to the owner(s).`);
   } catch (e) {
     console.error(`  ! could not mail the missed list: ${maskEmailsIn(e.message)}`);
   }
 }
 
-// --resend-last: the last edition again, to RESEND_TO only.
-async function resendLast() {
-  const wanted = parseAddressList(process.env.RESEND_TO);
-  if (!wanted.length) throw new Error("--resend-last needs RESEND_TO (the addresses to send to)");
+function resendTargets() {
+  let raw = process.env.RESEND_TO || "";
+  // Read the dispatch input from the event payload rather than an env var, so
+  // the addresses are never echoed into the public Actions log.
+  if (!raw && process.env.GITHUB_EVENT_PATH) {
+    const ev = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+    raw = ev.inputs?.resend_to || "";
+  }
+  return [...new Set(raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean))];
+}
 
-  // The last edition that went out, however many empty runs came after it,
-  // and the send just before it (the watermark it used).
-  const { data: edition, error: editionError } = await supa
+// Re-send the most recent edition to specific addresses. The edition is the
+// changes between the previous send and the latest one: exactly what went out.
+async function resendLatest() {
+  // The latest send that reached anyone: a morning with no new items still
+  // writes a 0-recipient row, which must not be taken for the edition.
+  const { data: latest, error: e1 } = await supa
     .from("newsletter_sends")
-    .select("send_date, sent_at, recipient_count")
+    .select("send_date, sent_at, recipient_count, change_count")
     .gt("recipient_count", 0)
     .order("sent_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (editionError) throw editionError;
-  if (!edition) throw new Error("No edition has gone out yet; nothing to resend.");
-  const { data: prev, error: prevError } = await supa
+  if (e1) throw e1;
+  if (!latest) throw new Error("No previous edition to re-send.");
+  // The send just before it is the watermark that edition started from.
+  const { data: prev, error: e3 } = await supa
     .from("newsletter_sends")
     .select("send_date, sent_at, recipient_count")
-    .lt("sent_at", edition.sent_at)
+    .lt("sent_at", latest.sent_at)
     .order("sent_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (prevError) throw prevError;
-  const win = lastEditionWindow(prev ? [edition, prev] : [edition]);
+  if (e3) throw e3;
+  const win = lastEditionWindow(prev ? [latest, prev] : [latest]);
 
-  const { data: changes, error } = await supa
+  const { data: changes, error: e2 } = await supa
     .from("changes")
     .select("*")
     .gt("created_at", win.since)
     .lte("created_at", win.until)
     .order("desk", { ascending: true })
     .order("created_at", { ascending: false });
-  if (error) throw error;
+  if (e2) throw e2;
+  if (changes.length !== latest.change_count) {
+    throw new Error(`Edition mismatch: found ${changes.length} items, ${latest.change_count} were sent. Aborting.`);
+  }
 
-  // Only people still subscribed (or owners): someone who unsubscribed since,
-  // or a typo in RESEND_TO, gets nothing.
-  const current = new Map((await recipients()).map((e) => [e.trim().toLowerCase(), e]));
-  const to = wanted.filter((e) => current.has(e)).map((e) => current.get(e));
-  const skipped = wanted.length - to.length;
-  console.log(
-    `Last edition ${win.sendDate}: ${changes.length} item(s) logged in (${win.since}, ${win.until}]. ` +
-      `Sending to ${to.length} of ${wanted.length} listed` +
-      (skipped ? ` (${skipped} not subscribed now, skipped).` : "."),
-  );
-  if (!changes.length || !to.length) return;
+  const allowed = new Set((await recipients()).map((r) => r.trim().toLowerCase()));
+  const targets = resendTargets();
+  const to = targets.filter((a) => allowed.has(a));
+  const skipped = targets.length - to.length;
+  if (skipped) console.log(`Skipping ${skipped} address(es) that are not current subscribers.`);
+  if (!to.length) throw new Error("No valid re-send recipients.");
+
   if (DRY_RUN) {
-    console.log(`Dry run, nothing sent. Would send to: ${to.map(maskEmail).join(", ")}`);
+    console.log(
+      `Dry run, nothing sent. Would re-send the ${latest.send_date} edition (${changes.length} items) ` +
+        `to ${to.length} recipient(s): ${to.map(maskEmail).join(", ")}`,
+    );
     return;
   }
-  const { subject, missed } = await sendEdition(to, changes, win.sendDate);
-  if (missed.length) await reportMissed(subject, missed);
+  console.log(`Re-sending the ${latest.send_date} edition (${changes.length} items) to ${to.length} recipient(s).`);
+  const { sent } = await sendEdition(changes, to, latest.send_date);
+  if (sent < to.length) process.exit(1);
 }
 
 async function main() {
   if (!process.env.RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
   // Without it unsubUrl() returns null and subscribers get no unsubscribe link.
   if (!UNSUB_SECRET) throw new Error("Missing UNSUB_SECRET");
-  if (RESEND_LAST) return resendLast();
-
+  if (RESEND) return resendLatest();
   const today = new Date().toISOString().slice(0, 10);
   const nowIso = new Date().toISOString();
 
@@ -221,7 +227,6 @@ async function main() {
 
   if (!changes.length && !SEND_EMPTY) {
     console.log(`No new changes since ${since} — skipping send.`);
-    if (DRY_RUN) return;
     // Advance the watermark so the next edition starts from now.
     await supa.from("newsletter_sends").insert({
       send_date: today,
@@ -237,12 +242,8 @@ async function main() {
     console.log("No recipients configured (set OWNER_EMAIL or add confirmed subscribers).");
     return;
   }
-  if (DRY_RUN) {
-    console.log(`Dry run, nothing sent: ${changes.length} item(s) to ${to.length} recipient(s).`);
-    return;
-  }
 
-  const { subject, sent, missed } = await sendEdition(to, changes, today);
+  const { subject, sent, missed } = await sendEdition(changes, to, today);
 
   // M-2: if every send failed (e.g. Resend outage), do NOT advance the
   // watermark — otherwise these items are lost from all future editions.
@@ -259,8 +260,8 @@ async function main() {
     change_count: changes.length,
   });
 
-  // Some missed: most got it, so the watermark moved on; the rest can be sent
-  // the same edition with --resend-last.
+  // Some missed: most got it, so the watermark moved on; the rest can get the
+  // same edition through resend_to.
   if (missed.length) await reportMissed(subject, missed);
 }
 
