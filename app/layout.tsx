@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Link from "next/link";
-import { DESKS, longDate } from "@/lib/format";
-import SearchBox from "@/components/SearchBox";
+import { playfair, sourceSerif, interTight } from "./fonts";
+import Masthead from "@/components/Masthead";
 import ConnectWithClaude from "@/components/ConnectWithClaude";
 
 const SITE = "https://giftcitytimes.com";
@@ -77,36 +76,10 @@ const JSONLD = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${playfair.variable} ${sourceSerif.variable} ${interTight.variable}`}>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSONLD) }} />
-        <header className="container masthead">
-          <div className="kicker">GIFT City · Gandhinagar · International Financial Services Centre</div>
-          <div className="nameplate">
-            <Link href="/" className="wordmark" aria-label="GIFT City Times — home">
-              GIFT City Times
-            </Link>
-          </div>
-          <div className="dateline">
-            <span>{longDate()}</span>
-            <span>·</span>
-            <span>Sourced from IFSCA</span>
-            <span>·</span>
-            <span>Automated Edition</span>
-          </div>
-          <nav className="nav" aria-label="Sections">
-            <Link href="/">Front Page</Link>
-            <Link href="/towers">Skyline</Link>
-            {DESKS.map((d) => (
-              <Link key={d.slug} href={`/desk/${d.slug}`}>
-                {d.label}
-              </Link>
-            ))}
-          </nav>
-          <div style={{ maxWidth: 560, margin: "6px auto 16px" }}>
-            <SearchBox />
-          </div>
-        </header>
+        <Masthead />
         <main className="container">
           {children}
           <ConnectWithClaude />
