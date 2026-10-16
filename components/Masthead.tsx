@@ -6,8 +6,16 @@ import { getTicker, type Quote } from "@/lib/ticker";
 export const revalidate = 900;
 
 function tickerDate(d = new Date()): string {
+  // GIFT City is in India — the masthead date must read in IST, not the
+  // server's UTC clock (otherwise it shows the previous day until 05:30 IST).
   return d
-    .toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    .toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    })
     .toUpperCase();
 }
 
