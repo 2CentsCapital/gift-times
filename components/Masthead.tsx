@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { DESKS } from "@/lib/format";
 import SearchBox from "@/components/SearchBox";
-import { getTicker, type Quote } from "@/lib/ticker";
+import { getTicker } from "@/lib/ticker";
+import LiveTicker from "@/components/LiveTicker";
 
 export const revalidate = 900;
 
@@ -41,21 +42,6 @@ function roman(n: number): string {
   return out || "I";
 }
 
-function QuoteSeg({ label, q, decimals = 2 }: { label: string; q: Quote; decimals?: number }) {
-  if (!q) return null;
-  const up = q.changePct >= 0;
-  return (
-    <span className="tk-seg">
-      <span className="tk-k">{label}</span>
-      {q.level.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{" "}
-      <b className={up ? "tk-up" : "tk-down"}>
-        {up ? "+" : "−"}
-        {Math.abs(q.changePct).toFixed(2)}%
-      </b>
-    </span>
-  );
-}
-
 export default async function Masthead() {
   const t = await getTicker();
   const now = new Date();
@@ -75,8 +61,7 @@ export default async function Masthead() {
               <span className="tk-k">Gandhinagar</span> {t.weather.tempC}°C, {t.weather.sky}
             </span>
           )}
-          <QuoteSeg label="NIFTY" q={t.nifty} decimals={0} />
-          <QuoteSeg label="USD/INR" q={t.usdinr} decimals={2} />
+          <LiveTicker initial={{ nifty: t.nifty, usdinr: t.usdinr, nasdaq: t.nasdaq }} />
           <span className="tk-seg tk-edition">Global Financial Hub Edition</span>
         </div>
       </div>

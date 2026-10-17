@@ -8,6 +8,7 @@ export type Ticker = {
   weather: { tempC: number; sky: string } | null;
   nifty: Quote;
   usdinr: Quote;
+  nasdaq: Quote;
 };
 
 // Gandhinagar / GIFT City.
@@ -27,11 +28,11 @@ function skyLabel(code: number): string {
   return "Fair";
 }
 
-async function getWeather(): Promise<Ticker["weather"]> {
+async function getWeather(fresh = false): Promise<Ticker["weather"]> {
   try {
     const r = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code`,
-      { next: { revalidate: 1800 }, signal: AbortSignal.timeout(6000) }
+      { ...(fresh ? { cache: "no-store" as const } : { next: { revalidate: 1800 } }), signal: AbortSignal.timeout(6000) }
     );
     if (!r.ok) return null;
     const j = await r.json();
@@ -44,13 +45,13 @@ async function getWeather(): Promise<Ticker["weather"]> {
 }
 
 // Yahoo Finance chart API — keyless. ^NSEI = NIFTY 50, USDINR=X = USD/INR spot.
-async function getQuote(symbol: string): Promise<Quote> {
+async function getQuote(symbol: string, fresh = false): Promise<Quote> {
   try {
     const r = await fetch(
       `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`,
       {
         headers: { "User-Agent": "Mozilla/5.0 giftcitytimes" },
-        next: { revalidate: 900 },
+        ...(fresh ? { cache: "no-store" as const } : { next: { revalidate: 900 } }),
         signal: AbortSignal.timeout(6000),
       }
     );
@@ -66,11 +67,15 @@ async function getQuote(symbol: string): Promise<Quote> {
   }
 }
 
-export async function getTicker(): Promise<Ticker> {
-  const [weather, nifty, usdinr] = await Promise.all([
-    getWeather(),
-    getQuote("^NSEI"),
-    getQuote("USDINR=X"),
+// Pass fresh=true (from the /api/ticker route) to bypass the data cache for a
+// genuinely live read; the default cached path is used for SSR so pages that
+// embed the masthead stay statically renderable.
+export async function getTicker(fresh = false): Promise<Ticker> {
+  const [weather, nifty, usdinr, nasdaq] = await Promise.all([
+    getWeather(fresh),
+    getQuote("^NSEI", fresh),
+    getQuote("USDINR=X", fresh),
+    getQuote("^IXIC", fresh), // Nasdaq Composite
   ]);
-  return { weather, nifty, usdinr };
+  return { weather, nifty, usdinr, nasdaq };
 }
