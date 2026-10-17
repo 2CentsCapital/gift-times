@@ -142,8 +142,40 @@ export default async function DeskPage({
   const activeMeta = activeSub ? subIndex.find((s) => s.name === activeSub) : undefined;
   const filtered = activeSub ? entities.filter((e) => (e.subcategory || "Unclassified") === activeSub) : entities;
 
+  // Structured data: a breadcrumb + an ItemList of this desk's entries, so the
+  // register listings can surface in search results and AI answers.
+  const listSource: { name: string; url?: string }[] = sezMode
+    ? meetings.map((m) => ({ name: m.title }))
+    : entityMode
+      ? entities.map((e) => ({ name: e.name, url: `${SITE}/entity/${e.id}` }))
+      : pubs.map((p) => ({ name: p.title }));
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "GIFT City Times", item: SITE },
+          { "@type": "ListItem", position: 2, name: `${deskLabel(desk)} Desk`, item: `${SITE}/desk/${params.desk}` },
+        ],
+      },
+      {
+        "@type": "ItemList",
+        name: `${deskLabel(desk)} in GIFT IFSC`,
+        numberOfItems: listSource.length,
+        itemListElement: listSource.slice(0, 50).map((it, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: it.name,
+          ...(it.url ? { url: it.url } : {}),
+        })),
+      },
+    ],
+  };
+
   return (
     <div style={{ padding: "24px 0" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="section-head">
         <h1>{deskLabel(desk)} Desk</h1>
         <span className="count">

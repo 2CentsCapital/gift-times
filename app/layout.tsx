@@ -24,7 +24,10 @@ export const metadata: Metadata = {
     "IFSCA circulars", "IFSCA regulations", "GIFT City tenders", "UAC approvals",
     "GIFT City directory", "India International Financial Services Centre",
   ],
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    types: { "application/rss+xml": [{ url: "/feed.xml", title: "GIFT City Times — GIFT IFSC filings" }] },
+  },
   openGraph: {
     type: "website",
     siteName: "GIFT City Times",
