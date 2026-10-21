@@ -26,7 +26,7 @@ async function sendConfirmation(email: string) {
         <tr><td style="padding:26px 30px;text-align:center;border-bottom:3px double #1a1a1a;">
           <div style="font:700 26px Georgia,serif;color:#1a1a1a;">GIFT City Times</div></td></tr>
         <tr><td style="padding:26px 30px;text-align:center;font-family:Georgia,serif;color:#1a1712;">
-          <p style="font-size:16px;line-height:1.5;">Confirm your subscription to get new licences, circulars, tenders and UAC approvals from GIFT IFSC, twice a day.</p>
+          <p style="font-size:16px;line-height:1.5;">Confirm your subscription to get new licences, circulars, tenders and UAC approvals from GIFT IFSC, every morning.</p>
           <a href="${url}" style="display:inline-block;margin-top:14px;background:#3f1212;color:#f3e9e0;font:700 14px Arial;letter-spacing:1px;text-decoration:none;padding:13px 30px;">CONFIRM SUBSCRIPTION</a>
           <p style="font:400 12px Arial;color:#a89e88;margin-top:22px;">If you didn’t request this, just ignore this email — you won’t be subscribed.</p>
         </td></tr>

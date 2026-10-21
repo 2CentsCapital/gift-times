@@ -255,7 +255,7 @@ export default async function FrontPage() {
         <div>
           <div className="sb-kicker">The 6 a.m. edition</div>
           <h2>Every new licence, circular and approval in GIFT IFSC.</h2>
-          <p>One email at 6am and 4pm, sorted by desk — the moment IFSCA publishes it.</p>
+          <p>One email each morning, sorted by desk, the moment IFSCA publishes it.</p>
           <div className="sb-note">No spam. Unsubscribe anytime.</div>
         </div>
         <div>

@@ -1,0 +1,162 @@
+{
+  "newfirms": [
+    {
+      "file": "newfirms-1.jpg",
+      "creator": "Tarul Patel",
+      "creatorUrl": "https://unsplash.com/@jackpatel",
+      "link": "https://unsplash.com/photos/a-street-with-cars-and-trees-qD7a6aN_GIk",
+      "alt": "a street with cars and trees"
+    },
+    {
+      "file": "newfirms-2.jpg",
+      "creator": "Vivek Doshi",
+      "creatorUrl": "https://unsplash.com/@wildandbeyondbyvivek",
+      "link": "https://unsplash.com/photos/a-view-of-a-city-from-a-high-viewpoint-KRtXOg-c9LE",
+      "alt": "a view of a city from a high viewpoint"
+    }
+  ],
+  "bullion": [
+    {
+      "file": "bullion-1.jpg",
+      "creator": "Jingming Pan",
+      "creatorUrl": "https://unsplash.com/@pokmer",
+      "link": "https://unsplash.com/photos/stacked-gold-bullion-bars-iYsrkq5qq0Q",
+      "alt": "stacked gold bullion bars"
+    },
+    {
+      "file": "bullion-2.jpg",
+      "creator": "Zlaťáky.cz",
+      "creatorUrl": "https://unsplash.com/@zlataky",
+      "link": "https://unsplash.com/photos/gold-bars-and-coins-collection-bN3KYPiAd8k",
+      "alt": "A collection of gold bars and coins with stamped markings and emblems"
+    }
+  ],
+  "banking": [
+    {
+      "file": "banking-1.jpg",
+      "creator": "Zoshua Colah",
+      "creatorUrl": "https://unsplash.com/@zoshuacolah",
+      "link": "https://unsplash.com/photos/the-sbi-building-stands-tall-under-a-cloudy-sky-lg37qwMWNRc",
+      "alt": "The sbi building stands tall under a cloudy sky"
+    },
+    {
+      "file": "banking-2.jpg",
+      "creator": "Chalo Garcia",
+      "creatorUrl": "https://unsplash.com/@photosbychalo",
+      "link": "https://unsplash.com/photos/white-and-blue-high-rise-building-oRsIy4CDUpc",
+      "alt": "white and blue high rise building"
+    }
+  ],
+  "insurance": [
+    {
+      "file": "insurance-1.jpg",
+      "creator": "Kenrick Baksh",
+      "creatorUrl": "https://unsplash.com/@kenrick",
+      "link": "https://unsplash.com/photos/white-and-blue-glass-walled-building-Wm8opOd-MDE",
+      "alt": "white and blue glass walled building"
+    },
+    {
+      "file": "insurance-2.jpg",
+      "creator": "Georgi Kalaydzhiev",
+      "creatorUrl": "https://unsplash.com/@jorok",
+      "link": "https://unsplash.com/photos/a-very-tall-building-next-to-a-very-tall-building-CZnDfXTNYV0",
+      "alt": "a very tall building next to a very tall building"
+    }
+  ],
+  "fintech": [
+    {
+      "file": "fintech-1.jpg",
+      "creator": "Taylor Vick",
+      "creatorUrl": "https://unsplash.com/@tvick",
+      "link": "https://unsplash.com/photos/cable-network-M5tzZtFCOfs",
+      "alt": "cable network"
+    },
+    {
+      "file": "fintech-2.jpg",
+      "creator": "imgix",
+      "creatorUrl": "https://unsplash.com/@imgix",
+      "link": "https://unsplash.com/photos/server-racks-in-data-center-klWUhr-wPJ8",
+      "alt": "Rows of black server racks with white logos in a data center"
+    }
+  ],
+  "regulation": [
+    {
+      "file": "regulation-1.jpg",
+      "creator": "Katie Moum",
+      "creatorUrl": "https://unsplash.com/@katiemoum",
+      "link": "https://unsplash.com/photos/white-concrete-building-under-sky-o0kbc907i20",
+      "alt": "white concrete building under sky"
+    },
+    {
+      "file": "regulation-2.jpg",
+      "creator": "Joel Durkee",
+      "creatorUrl": "https://unsplash.com/@joeldurkee",
+      "link": "https://unsplash.com/photos/white-concrete-building-during-daytime-1Hx3VqgApkI",
+      "alt": "white concrete building during daytime"
+    }
+  ],
+  "news": [
+    {
+      "file": "news-1.jpg",
+      "creator": "Headway",
+      "creatorUrl": "https://unsplash.com/@headwayio",
+      "link": "https://unsplash.com/photos/crowd-of-people-sitting-on-chairs-inside-room-F2KRf_QfCqw",
+      "alt": "crowd of people sitting on chairs inside room"
+    },
+    {
+      "file": "news-2.jpg",
+      "creator": "Wan San Yip",
+      "creatorUrl": "https://unsplash.com/@wansan_99",
+      "link": "https://unsplash.com/photos/people-sitting-on-chair-inside-room-ID1yWa1Wpx0",
+      "alt": "people sitting on chair inside room"
+    }
+  ],
+  "buildout": [
+    {
+      "file": "buildout-1.jpg",
+      "creator": "Billy Freeman",
+      "creatorUrl": "https://unsplash.com/@billyfreeman",
+      "link": "https://unsplash.com/photos/red-crane-near-brown-building-V38rMuljw2Y",
+      "alt": "red crane near brown building"
+    },
+    {
+      "file": "buildout-2.jpg",
+      "creator": "Pavel Avakumov",
+      "creatorUrl": "https://unsplash.com/@ava_kum",
+      "link": "https://unsplash.com/photos/modern-skyscrapers-under-construction-with-cranes-y-puB7TgIe0",
+      "alt": "Modern skyscrapers under construction with cranes"
+    }
+  ],
+  "markets": [
+    {
+      "file": "markets-1.jpg",
+      "creator": "Maxim Klimashin",
+      "creatorUrl": "https://unsplash.com/@maxim_klimashin",
+      "link": "https://unsplash.com/photos/new-york-stock-exchange-building-with-american-flags-HpYTYo_jF2Y",
+      "alt": "New york stock exchange building with american flags"
+    },
+    {
+      "file": "markets-2.jpg",
+      "creator": "David Vives",
+      "creatorUrl": "https://unsplash.com/@davidvives",
+      "link": "https://unsplash.com/photos/new-york-stock-exchange-building-with-american-flags-xnzSgqyP8Hs",
+      "alt": "New york stock exchange building with american flags"
+    }
+  ],
+  "default": [
+    {
+      "file": "default-1.jpg",
+      "creator": "Uday Sankar Yerramilli",
+      "creatorUrl": "https://unsplash.com/@usyerramilli",
+      "link": "https://unsplash.com/photos/a-modern-high-rise-building-stands-tall-against-a-clear-sky-X6i1vNBQA2o",
+      "alt": "A modern high-rise building stands tall against a clear sky"
+    },
+    {
+      "file": "default-2.jpg",
+      "creator": "Zoshua Colah",
+      "creatorUrl": "https://unsplash.com/@zoshuacolah",
+      "link": "https://unsplash.com/photos/panoramic-view-of-a-dense-cityscape-under-cloudy-skies-XaT_qKAdEhc",
+      "alt": "Panoramic view of a dense cityscape under cloudy skies"
+    }
+  ]
+}

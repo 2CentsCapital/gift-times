@@ -24,6 +24,6 @@ export async function GET(req: Request) {
 
   return actionPage(
     "You’re subscribed ✓",
-    "Confirmed. The next edition of GIFT City Times will land in your inbox, twice a day when there’s news."
+    "Confirmed. The next edition of GIFT City Times will land in your inbox each morning when there’s news."
   );
 }
