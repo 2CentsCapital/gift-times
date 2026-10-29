@@ -7,8 +7,9 @@ import {
   getRecentChanges,
   type Entity,
   type Publication,
+  type Change,
 } from "@/lib/queries";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, DESKS } from "@/lib/format";
 import { docHref } from "@/lib/doc";
 import { getHeroImage, themeForDesk } from "@/lib/heroImage";
 import { buildLead } from "@/lib/lead";
@@ -24,24 +25,68 @@ function shortDate(iso?: string | null): string {
     .toUpperCase();
 }
 
-// A dated document row in "Latest from the Registry".
-function DocRow({ p }: { p: Publication }) {
-  const dh = docHref(p.file_url);
-  // Prefer a single, singular kind label ("Circular"), falling back to the desk.
-  const tag = p.kind ? p.kind[0].toUpperCase() + p.kind.slice(1) : p.desk || "";
+// A row in "Latest Updates" — one entry from the change log (a new
+// registration, filing, UAC approval or surrender), newest first.
+type Row = Change & { ref_id?: string; ref_table?: string };
+
+function cleanHeadline(c: Row): string {
+  let h = c.headline || "";
+  // Drop the "New broker / ...:" or "New circular:" prefix — the tag carries that.
+  if (c.change_type === "entity_added" || c.change_type === "publication_added") {
+    h = h.replace(/^new\s+[^:]*:\s*/i, "");
+  }
+  // Em dashes out of ingested text — a comma reads cleaner.
+  return h.replace(/\s*—\s*/g, ", ").trim();
+}
+
+function changeTag(c: Row): string {
+  const t = c.change_type || "";
+  if (t.startsWith("sez_")) return "UAC";
+  if (t === "entity_added") return "New firm";
+  if (t === "entity_removed") return "Exit";
+  if (t.startsWith("entity_status")) return "Status";
+  if (t.startsWith("entity_")) return "Update";
+  if (t === "publication_added") {
+    const map: Record<string, string> = {
+      Circulars: "Circular", Regulations: "Regulation", News: "News", Tenders: "Tender",
+      Consultations: "Consultation", Reports: "Report", Guidance: "Guidance", Speeches: "Speech",
+    };
+    return map[c.desk] || c.desk || "Filing";
+  }
+  return c.desk || "Update";
+}
+
+function changeLink(c: Row): { href?: string; external?: boolean } {
+  const t = c.change_type || "";
+  if (t.startsWith("entity_") && c.ref_table === "entities" && c.ref_id) return { href: `/entity/${c.ref_id}` };
+  if (t.startsWith("sez_")) return { href: "/desk/sez" };
+  if (t === "publication_added") {
+    const dh = docHref(c.url);
+    if (dh) return { href: dh, external: true };
+    const slug = DESKS.find((d) => d.label === c.desk)?.slug;
+    if (slug) return { href: `/desk/${slug}` };
+  }
+  return {};
+}
+
+function WireRow({ c }: { c: Row }) {
+  const { href, external } = changeLink(c);
   const body = (
     <>
-      <span className="doc-date">{fmtDate(p.publish_date)}</span>
-      <span className="doc-title">{p.title}</span>
-      <span className="doc-tag">{tag}</span>
+      <span className="doc-date">{fmtDate(c.occurred_on)}</span>
+      <span className="doc-title">{cleanHeadline(c)}</span>
+      <span className="doc-tag">{changeTag(c)}</span>
     </>
   );
-  return dh ? (
-    <a className="doc-row" href={dh} target="_blank" rel="noopener noreferrer">
+  if (!href) return <div className="doc-row">{body}</div>;
+  return external ? (
+    <a className="doc-row" href={href} target="_blank" rel="noopener noreferrer">
       {body}
     </a>
   ) : (
-    <div className="doc-row">{body}</div>
+    <Link className="doc-row" href={href}>
+      {body}
+    </Link>
   );
 }
 
@@ -127,12 +172,23 @@ export default async function FrontPage() {
   const lead = buildLead(changes, regs, total);
   const latestDate = changes[0]?.occurred_on || null;
 
-  // Latest documents: circulars, regulations and press, newest first.
+  // Right rail: the latest featured filings (circulars, regulations, press).
   const docsAll = [...circ, ...regs, ...news]
     .filter((p) => p.publish_date)
     .sort((a, b) => (a.publish_date! < b.publish_date! ? 1 : -1));
   const railStories = docsAll.slice(0, 4);
-  const docs = docsAll.slice(4, 12);
+
+  // "Latest Updates": one reverse-chronological feed of everything new —
+  // registrations, filings, UAC approvals, surrenders — straight from the change
+  // log, de-duplicated and skipping items already featured in the rail.
+  const railTitles = new Set(railStories.map((p) => p.title));
+  const seenRows = new Set<string>();
+  const wire = (changes as Row[]).filter((c) => {
+    const h = cleanHeadline(c);
+    if (!h || seenRows.has(h) || railTitles.has(h)) return false;
+    seenRows.add(h);
+    return true;
+  }).slice(0, 14);
 
   // Two framed photos, matched to each story's theme (not a loose keyword).
   const [leadHero, railHero] = await Promise.all([
@@ -215,20 +271,18 @@ export default async function FrontPage() {
         </div>
       </section>
 
-      {/* ---- Latest documents ---- */}
+      {/* ---- Latest updates (live activity feed) ---- */}
       <section className="latest-docs">
         <div className="edition-head">
-          <span>Latest from the Registry</span>
-          <Link href="/desk/circulars" className="view-all">
-            View all →
-          </Link>
+          <span>Latest Updates</span>
+          <span>New registrations, filings and UAC approvals, newest first</span>
         </div>
-        {docs.length === 0 ? (
-          <p className="empty">Quiet on the wire. New filings appear here the moment IFSCA posts them.</p>
+        {wire.length === 0 ? (
+          <p className="empty">Quiet on the wire. New activity appears here the moment IFSCA posts it.</p>
         ) : (
           <div className="doc-list">
-            {docs.map((p) => (
-              <DocRow key={p.id} p={p} />
+            {wire.map((c) => (
+              <WireRow key={c.id} c={c} />
             ))}
           </div>
         )}
