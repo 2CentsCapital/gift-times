@@ -32,6 +32,10 @@ const BRANDS = [
   "blackrock", "goldman", "morgan", "jpmorgan", "hsbc", "citi", "barclays", "nomura", "ubs",
   "deutsche", "bnp", "standard chartered", "blackstone", "kkr", "carlyle", "temasek", "brookfield",
   "wells fargo", "nuvama", "edelweiss", "360 one", "avendus", "iifl", "angel one", "groww",
+  "moody", "fitch", "s&p global", "allianz", "prudential", "metlife", "vanguard", "fidelity",
+  "schroders", "amundi", "pimco", "invesco", "franklin templeton", "mizuho", "mufg", "sumitomo",
+  "macquarie", "apollo global", "general atlantic", "warburg pincus", "santander", "natixis",
+  "credit agricole", "societe generale", "dws",
 ];
 // Generic financial descriptors — a weaker signal of significance.
 const FINANCE_WORDS = [
@@ -57,7 +61,7 @@ function shortName(name: string): string {
     .replace(/\s*\(IFSC[^)]*\)/gi, "")
     .replace(/\bGlobal Treasury Centre\b/gi, "")
     .replace(/\bIFSC\b/g, "")
-    .replace(/\b(Private Limited|Pvt\.?\s*Ltd\.?|Limited|Ltd\.?|LLP|Inc\.?|Co\.?|Branch)\b/gi, "")
+    .replace(/\b(Private Limited|Pvt\.?\s*Ltd\.?|Pte\.?\s*Ltd\.?|Pte\.?|Limited|Ltd\.?|LLP|Inc\.?|Co\.?|Branch)\b/gi, "")
     .replace(/[,.\s]+$/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
@@ -135,16 +139,36 @@ export function buildLead(changes: Change[], regs: Publication[], total: number)
   const weekAdded = added.filter((c) => inWeek(c.occurred_on));
   const batch = weekAdded.length ? weekAdded : added;
 
-  // De-duplicate and score.
+  // De-duplicate and score, keeping each entrant's day so the lead can favour the
+  // freshest news instead of replaying the same week-old marquee names.
   const seen = new Set<string>();
   const items = batch
     .map((c) => {
       const name = cleanName(c.headline);
-      return { name, short: shortName(name), category: c.category, score: notability(name, c.category) };
+      return {
+        name,
+        short: shortName(name),
+        category: c.category,
+        score: notability(name, c.category),
+        day: c.occurred_on ? Math.floor(new Date(c.occurred_on).getTime() / DAY) : 0,
+      };
     })
     .filter((i) => i.short && !seen.has(i.short.toLowerCase()) && seen.add(i.short.toLowerCase()));
 
-  const notable = items.filter((i) => i.score >= 3).sort((a, b) => b.score - a.score);
+  // A firm leads the headline if it's a recognisable/marquee name, or if it's the
+  // freshest non-routine entrant — a broker, bank, fund or insurer joining today is
+  // news even when its name isn't a household brand. Newest day first (so the hero
+  // changes as new firms arrive), then by significance within a day.
+  const newestDay = items.reduce((m, i) => Math.max(m, i.day), 0);
+  const leadWorthy = (i: (typeof items)[number]) =>
+    i.score >= 3 || (i.day === newestDay && (CAT_TIER[i.category ?? ""] ?? 1) >= 2);
+  const worthy = items.filter(leadWorthy);
+  // The freshest worthy entrant leads the headline, so the hero refreshes as new
+  // firms arrive; the remaining slots go to the week's most significant names (not
+  // simply the next-newest), so a minor firm never bumps a marquee one.
+  const freshest = [...worthy].sort((a, b) => b.day - a.day || b.score - a.score)[0];
+  const byScore = [...worthy].sort((a, b) => b.score - a.score || b.day - a.day);
+  const notable = freshest ? [freshest, ...byScore.filter((i) => i.short !== freshest.short)] : byScore;
   const count = batch.length;
 
   // The dominant category in the batch (what most of the week's entrants are).
