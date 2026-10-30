@@ -13,6 +13,34 @@
       "creatorUrl": "https://unsplash.com/@wildandbeyondbyvivek",
       "link": "https://unsplash.com/photos/a-view-of-a-city-from-a-high-viewpoint-KRtXOg-c9LE",
       "alt": "a view of a city from a high viewpoint"
+    },
+    {
+      "file": "newfirms-5.jpg",
+      "creator": "Hoover Tung",
+      "creatorUrl": "https://unsplash.com/@lozt",
+      "link": "https://unsplash.com/photos/areal-photography-of-cityscape-4QcH0MBnAIM",
+      "alt": "areal photography of cityscape"
+    },
+    {
+      "file": "newfirms-6.jpg",
+      "creator": "Andres Garcia",
+      "creatorUrl": "https://unsplash.com/@andresgarcia",
+      "link": "https://unsplash.com/photos/city-with-high-rise-buildings-under-orange-and-gray-skies-during-sunset-_SWgYuWS9wY",
+      "alt": "city with high rise buildings under orange and gray skies during sunset"
+    },
+    {
+      "file": "newfirms-7.jpg",
+      "creator": "Muhammed Fardeen Finos",
+      "creatorUrl": "https://unsplash.com/@muhammedfardeen",
+      "link": "https://unsplash.com/photos/london-skyline-over-river-thames-1DQa2q6FtRc",
+      "alt": "The London skyline silhouetted against a warm orange sky above the River Thames"
+    },
+    {
+      "file": "newfirms-8.jpg",
+      "creator": "Miguel A Amutio",
+      "creatorUrl": "https://unsplash.com/@amutiomi",
+      "link": "https://unsplash.com/photos/city-skyline-at-sunrise-over-the-water-7yVP-SE31y8",
+      "alt": "City skyline at sunrise over the water"
     }
   ],
   "bullion": [
@@ -29,6 +57,27 @@
       "creatorUrl": "https://unsplash.com/@zlataky",
       "link": "https://unsplash.com/photos/gold-bars-and-coins-collection-bN3KYPiAd8k",
       "alt": "A collection of gold bars and coins with stamped markings and emblems"
+    },
+    {
+      "file": "bullion-3.jpg",
+      "creator": "Zlaťáky.cz",
+      "creatorUrl": "https://unsplash.com/@zlataky",
+      "link": "https://unsplash.com/photos/gold-bars-and-coins-pile-y7jRMXOz7pE",
+      "alt": "A pile of gold bars and coins on a black background"
+    },
+    {
+      "file": "bullion-4.jpg",
+      "creator": "Zlaťáky.cz",
+      "creatorUrl": "https://unsplash.com/@zlataky",
+      "link": "https://unsplash.com/photos/gold-and-silver-round-coins-8t9c3ET7_Ts",
+      "alt": "gold and silver round coins"
+    },
+    {
+      "file": "bullion-5.jpg",
+      "creator": "Zlaťáky.cz",
+      "creatorUrl": "https://unsplash.com/@zlataky",
+      "link": "https://unsplash.com/photos/gold-and-silver-round-coins-S6cWf7TIk9U",
+      "alt": "gold and silver round coins"
     }
   ],
   "banking": [
@@ -45,6 +94,27 @@
       "creatorUrl": "https://unsplash.com/@photosbychalo",
       "link": "https://unsplash.com/photos/white-and-blue-high-rise-building-oRsIy4CDUpc",
       "alt": "white and blue high rise building"
+    },
+    {
+      "file": "banking-3.jpg",
+      "creator": "Zoshua Colah",
+      "creatorUrl": "https://unsplash.com/@zoshuacolah",
+      "link": "https://unsplash.com/photos/a-tall-bank-building-stands-under-a-cloudy-sky-LsTB0Es0_-o",
+      "alt": "A tall bank building stands under a cloudy sky"
+    },
+    {
+      "file": "banking-4.jpg",
+      "creator": "Clay Banks",
+      "creatorUrl": "https://unsplash.com/@claybanks",
+      "link": "https://unsplash.com/photos/city-skyline-under-gray-cloudy-sky-during-daytime--Ni2fpLUgRI",
+      "alt": "city skyline under gray cloudy sky during daytime"
+    },
+    {
+      "file": "banking-5.jpg",
+      "creator": "Marcus",
+      "creatorUrl": "https://unsplash.com/@northyorkjpg",
+      "link": "https://unsplash.com/photos/a-tall-bmo-building-stands-against-a-clear-blue-sky-AGsl8BcvskY",
+      "alt": "A tall bmo building stands against a clear blue sky"
     }
   ],
   "insurance": [
@@ -61,6 +131,27 @@
       "creatorUrl": "https://unsplash.com/@jorok",
       "link": "https://unsplash.com/photos/a-very-tall-building-next-to-a-very-tall-building-CZnDfXTNYV0",
       "alt": "a very tall building next to a very tall building"
+    },
+    {
+      "file": "insurance-3.jpg",
+      "creator": "DANIEL STAPLE",
+      "creatorUrl": "https://unsplash.com/@danieldesigns",
+      "link": "https://unsplash.com/photos/a-very-tall-building-with-a-clock-on-its-side-pBHfIx2tnc0",
+      "alt": "A very tall building with a clock on it's side"
+    },
+    {
+      "file": "insurance-4.jpg",
+      "creator": "Aliona Zahrai",
+      "creatorUrl": "https://unsplash.com/@aliona_zahrai",
+      "link": "https://unsplash.com/photos/upper-section-of-a-modern-building-with-blue-glass-windows-qdOmIFr-cXg",
+      "alt": "Upper section of a modern building with blue glass windows"
+    },
+    {
+      "file": "insurance-5.jpg",
+      "creator": "Zoshua Colah",
+      "creatorUrl": "https://unsplash.com/@zoshuacolah",
+      "link": "https://unsplash.com/photos/modern-skyscrapers-rise-above-a-bustling-cityscape-under-clouds-4uLfrQ_B26E",
+      "alt": "Modern skyscrapers rise above a bustling cityscape under clouds"
     }
   ],
   "fintech": [
@@ -77,6 +168,27 @@
       "creatorUrl": "https://unsplash.com/@imgix",
       "link": "https://unsplash.com/photos/server-racks-in-data-center-klWUhr-wPJ8",
       "alt": "Rows of black server racks with white logos in a data center"
+    },
+    {
+      "file": "fintech-3.jpg",
+      "creator": "Lightsaber Collection",
+      "creatorUrl": "https://unsplash.com/@lightsabercollection",
+      "link": "https://unsplash.com/photos/a-bunch-of-wires-that-are-connected-to-a-server-T-IN5o3kxyA",
+      "alt": "a bunch of wires that are connected to a server"
+    },
+    {
+      "file": "fintech-4.jpg",
+      "creator": "imgix",
+      "creatorUrl": "https://unsplash.com/@imgix",
+      "link": "https://unsplash.com/photos/black-imgix-server-system-pgdaAwf6IJg",
+      "alt": "black ImgIX server system"
+    },
+    {
+      "file": "fintech-5.jpg",
+      "creator": "Jordan Harrison",
+      "creatorUrl": "https://unsplash.com/@jouwdan",
+      "link": "https://unsplash.com/photos/blue-utp-cord-40XgDxBfYXM",
+      "alt": "blue UTP cord"
     }
   ],
   "regulation": [
@@ -93,6 +205,34 @@
       "creatorUrl": "https://unsplash.com/@joeldurkee",
       "link": "https://unsplash.com/photos/white-concrete-building-during-daytime-1Hx3VqgApkI",
       "alt": "white concrete building during daytime"
+    },
+    {
+      "file": "regulation-3.jpg",
+      "creator": "Jesse Collins",
+      "creatorUrl": "https://unsplash.com/@jtc",
+      "link": "https://unsplash.com/photos/gray-stone-columns-worms-eye-view-photo-ICXMkhRdquA",
+      "alt": "gray stone columns worm's-eye view photo"
+    },
+    {
+      "file": "regulation-4.jpg",
+      "creator": "Valentin Tatarnikov",
+      "creatorUrl": "https://unsplash.com/@valenen",
+      "link": "https://unsplash.com/photos/a-grand-building-facade-with-many-white-classical-columns-eH-j6fLFZc4",
+      "alt": "A grand building facade with many white classical columns"
+    },
+    {
+      "file": "regulation-5.jpg",
+      "creator": "Joel Durkee",
+      "creatorUrl": "https://unsplash.com/@joeldurkee",
+      "link": "https://unsplash.com/photos/white-concrete-building-under-blue-sky-during-daytime-9fhUHWuaaA8",
+      "alt": "white concrete building under blue sky during daytime"
+    },
+    {
+      "file": "regulation-6.jpg",
+      "creator": "Margaret Giatras",
+      "creatorUrl": "https://unsplash.com/@margaretann110",
+      "link": "https://unsplash.com/photos/grand-building-with-columns-and-american-flag-banner-j3VuKymcjwc",
+      "alt": "Grand building with columns and american flag banner"
     }
   ],
   "news": [
@@ -109,6 +249,34 @@
       "creatorUrl": "https://unsplash.com/@wansan_99",
       "link": "https://unsplash.com/photos/people-sitting-on-chair-inside-room-ID1yWa1Wpx0",
       "alt": "people sitting on chair inside room"
+    },
+    {
+      "file": "news-3.jpg",
+      "creator": "Jakob Dalbjörn",
+      "creatorUrl": "https://unsplash.com/@jakobdalbjorn",
+      "link": "https://unsplash.com/photos/people-inside-conference-cuKJre3nyYc",
+      "alt": "people inside conference"
+    },
+    {
+      "file": "news-4.jpg",
+      "creator": "Jaime Lopes",
+      "creatorUrl": "https://unsplash.com/@jaimelopes",
+      "link": "https://unsplash.com/photos/people-raising-hands-with-bokeh-lights-0RDBOAdnbWM",
+      "alt": "people raising hands with bokeh lights"
+    },
+    {
+      "file": "news-5.jpg",
+      "creator": "davide ragusa",
+      "creatorUrl": "https://unsplash.com/@davideragusa",
+      "link": "https://unsplash.com/photos/grayscale-photo-of-people-sitting-on-chair-gcDwzUGuUoI",
+      "alt": "grayscale photo of people sitting on chair"
+    },
+    {
+      "file": "news-6.jpg",
+      "creator": "Miguel Henriques",
+      "creatorUrl": "https://unsplash.com/@miguel_photo",
+      "link": "https://unsplash.com/photos/man-speaking-in-front-of-crowd-RfiBK6Y_upQ",
+      "alt": "man speaking in front of crowd"
     }
   ],
   "buildout": [
@@ -125,6 +293,27 @@
       "creatorUrl": "https://unsplash.com/@ava_kum",
       "link": "https://unsplash.com/photos/modern-skyscrapers-under-construction-with-cranes-y-puB7TgIe0",
       "alt": "Modern skyscrapers under construction with cranes"
+    },
+    {
+      "file": "buildout-3.jpg",
+      "creator": "AURELIEN CHATEAUDON",
+      "creatorUrl": "https://unsplash.com/@eskapades",
+      "link": "https://unsplash.com/photos/a-couple-of-tall-buildings-under-construction-Hxou_f0_fJg",
+      "alt": "a couple of tall buildings under construction"
+    },
+    {
+      "file": "buildout-4.jpg",
+      "creator": "Adesh Bankar",
+      "creatorUrl": "https://unsplash.com/@adesh_bankar",
+      "link": "https://unsplash.com/photos/a-crane-lifting-a-building-YNm1fhRIMa8",
+      "alt": "a crane lifting a building"
+    },
+    {
+      "file": "buildout-5.jpg",
+      "creator": "Georg Eiermann",
+      "creatorUrl": "https://unsplash.com/@georgeiermann",
+      "link": "https://unsplash.com/photos/a-view-of-a-city-from-a-high-rise-P91FdLCT5ts",
+      "alt": "a view of a city from a high rise"
     }
   ],
   "markets": [
@@ -141,6 +330,27 @@
       "creatorUrl": "https://unsplash.com/@davidvives",
       "link": "https://unsplash.com/photos/new-york-stock-exchange-building-with-american-flags-xnzSgqyP8Hs",
       "alt": "New york stock exchange building with american flags"
+    },
+    {
+      "file": "markets-3.jpg",
+      "creator": "Jakub Żerdzicki",
+      "creatorUrl": "https://unsplash.com/@jakubzerdzicki",
+      "link": "https://unsplash.com/photos/fingers-interacting-with-a-stock-market-graph-on-a-tablet-lnuOh9vs8v0",
+      "alt": "Fingers interacting with a stock market graph on a tablet"
+    },
+    {
+      "file": "markets-4.jpg",
+      "creator": "Invest Europe",
+      "creatorUrl": "https://unsplash.com/@invest_europe",
+      "link": "https://unsplash.com/photos/man-working-at-a-computer-in-an-office-8vbYa3T367Q",
+      "alt": "Man working at a computer in an office"
+    },
+    {
+      "file": "markets-5.jpg",
+      "creator": "Jakub Żerdzicki",
+      "creatorUrl": "https://unsplash.com/@jakubzerdzicki",
+      "link": "https://unsplash.com/photos/trader-analyzing-stock-market-charts-on-computer-screens-with-calculator--DWqOL_d91I",
+      "alt": "Trader analyzing stock market charts on computer screens with calculator"
     }
   ],
   "default": [
@@ -157,6 +367,27 @@
       "creatorUrl": "https://unsplash.com/@zoshuacolah",
       "link": "https://unsplash.com/photos/panoramic-view-of-a-dense-cityscape-under-cloudy-skies-XaT_qKAdEhc",
       "alt": "Panoramic view of a dense cityscape under cloudy skies"
+    },
+    {
+      "file": "default-3.jpg",
+      "creator": "Andres Garcia",
+      "creatorUrl": "https://unsplash.com/@andresgarcia",
+      "link": "https://unsplash.com/photos/grayscale-photo-of-city-buildings-under-cloudy-sky-jAkOEbpv_eI",
+      "alt": "grayscale photo of city buildings under cloudy sky"
+    },
+    {
+      "file": "default-4.jpg",
+      "creator": "cmophoto.net",
+      "creatorUrl": "https://unsplash.com/@cmophoto",
+      "link": "https://unsplash.com/photos/city-skyline-under-white-clouds-C4xYXFUSEaQ",
+      "alt": "city skyline under white clouds"
+    },
+    {
+      "file": "default-5.jpg",
+      "creator": "Alien eyes",
+      "creatorUrl": "https://unsplash.com/@alien_film",
+      "link": "https://unsplash.com/photos/city-skyline-at-sunset-with-golden-light-CoW_pR3EF5E",
+      "alt": "City skyline at sunset with golden light"
     }
   ]
 }
