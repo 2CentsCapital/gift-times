@@ -155,20 +155,15 @@ export function buildLead(changes: Change[], regs: Publication[], total: number)
     })
     .filter((i) => i.short && !seen.has(i.short.toLowerCase()) && seen.add(i.short.toLowerCase()));
 
-  // A firm leads the headline if it's a recognisable/marquee name, or if it's the
-  // freshest non-routine entrant — a broker, bank, fund or insurer joining today is
-  // news even when its name isn't a household brand. Newest day first (so the hero
-  // changes as new firms arrive), then by significance within a day.
+  // Headline names come from the FRESHEST cohort only — the entrants from the most
+  // recent day the register moved — ranked by significance (the most notable new
+  // name leads). A marquee name from earlier in the week is never replayed: the
+  // moment newer firms register, they take over the headline and the hero, so the
+  // front page can't pin the same week-old name for days on end. When today's batch
+  // has no big names, it simply names the day's most notable actual entrants.
   const newestDay = items.reduce((m, i) => Math.max(m, i.day), 0);
-  const leadWorthy = (i: (typeof items)[number]) =>
-    i.score >= 3 || (i.day === newestDay && (CAT_TIER[i.category ?? ""] ?? 1) >= 2);
-  const worthy = items.filter(leadWorthy);
-  // The freshest worthy entrant leads the headline, so the hero refreshes as new
-  // firms arrive; the remaining slots go to the week's most significant names (not
-  // simply the next-newest), so a minor firm never bumps a marquee one.
-  const freshest = [...worthy].sort((a, b) => b.day - a.day || b.score - a.score)[0];
-  const byScore = [...worthy].sort((a, b) => b.score - a.score || b.day - a.day);
-  const notable = freshest ? [freshest, ...byScore.filter((i) => i.short !== freshest.short)] : byScore;
+  const fresh = items.filter((i) => i.day === newestDay);
+  const notable = [...fresh].sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
   const count = batch.length;
 
   // The dominant category in the batch (what most of the week's entrants are).
